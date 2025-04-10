@@ -75,9 +75,9 @@ pygame.init()
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 pygame.display.set_caption("Simple Chess")
 Window.from_display_module().maximize()
-font = pygame.font.Font("segoeui.ttf", 12)
-font_bold = pygame.font.Font("segoeuib.ttf", 20)
-big_font = pygame.font.Font("segoeuib.ttf", 32)
+font = pygame.font.Font("assets/fonts/segoeui.ttf", 12)
+font_bold = pygame.font.Font("assets/fonts/segoeuib.ttf", 20)
+big_font = pygame.font.Font("assets/fonts/segoeuib.ttf", 32)
 timer = pygame.time.Clock()
 fps = 60
 grid_size = 100
@@ -88,6 +88,7 @@ board_size = board_grid_size * grid_size
 board_start_x = (screen.get_width() - board_size) // 2
 board_start_y = (screen.get_height() - board_size) // 2
 border_radius = 15
+is_in_check = False
 # shadow_surface = screen
 # shadow_surface.fill(pygame.Color(0, 0, 0))
 # shadow_mask = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
@@ -363,19 +364,20 @@ def draw_captured_pieces():
 
     piece_spacing = 15
     vertical_gap = 10
-    distance_from_middle = 50
+    distance_from_middle = 75
     piece_height = piece_scale_small[1]
+    white_material_count = 0
+    black_material_count = 0
 
     for i, piece_type in enumerate(["pawn", "knight", "bishop", "rook", "queen", "king"]):
         # if piece_type == "king":
         #     # Will add game over handling here
         #     break
 
-        count_black = black_counts[piece_type]
-
         white_y = center_y + vertical_gap + (i * (piece_height + vertical_gap)) + distance_from_middle
         black_y = center_y - vertical_gap - (i * (piece_height + vertical_gap)) - piece_height - distance_from_middle
 
+        count_black = black_counts[piece_type]
         if count_black > 0:
 
             # Draw piece icons
@@ -403,6 +405,45 @@ def draw_captured_pieces():
             screen.blit(text_surf, (x_offset + grid_size * 1.25 + 50, text_y))
 
 
+    # Displaying total material value for pieces
+    for piece in captured_pieces_white:
+        if piece == "pawn":
+            white_material_count += 1
+        elif piece == "knight":
+            white_material_count += 3
+        elif piece == "bishop":
+            white_material_count += 3
+        elif piece == "rook":
+            white_material_count += 5
+        elif piece == "queen":
+            white_material_count += 9
+
+    if white_material_count > 0:
+        text_surf = font_bold.render(str(white_material_count), True, DARK_GRAY)
+        text_surf_2 = font_bold.render("Total Material: ", True, DARK_GRAY)
+        text_y = center_y - vertical_gap - (-1.5 * (piece_height + vertical_gap)) - piece_height - distance_from_middle
+        screen.blit(text_surf, (x_offset + 50 + grid_size * 1.25, text_y))
+        screen.blit(text_surf_2, (x_offset, text_y))
+
+    for piece in captured_pieces_black:
+        if piece == "pawn":
+            black_material_count += 1
+        elif piece == "knight":
+            black_material_count += 3
+        elif piece == "bishop":
+            black_material_count += 3
+        elif piece == "rook":
+            black_material_count += 5
+        elif piece == "queen":
+            black_material_count += 9
+
+    if black_material_count > 0:
+        text_surf = font_bold.render(str(black_material_count), True, WHITE)
+        text_surf_2 = font_bold.render("Total Material: ", True, WHITE)
+        text_y = center_y + vertical_gap + (-1.5 * (piece_height + vertical_gap)) + distance_from_middle + 20 # Font size
+        screen.blit(text_surf, (x_offset + 50 + grid_size * 1.25, text_y))
+        screen.blit(text_surf_2, (x_offset, text_y))
+
 # Function to check valid options for alive pieces
 def check_options(pieces, locations, turn):
     moves_list = []
@@ -426,6 +467,9 @@ def check_options(pieces, locations, turn):
 
     return all_moves_list
 
+def check_check():
+    if turn_step < 2:
+        king_index = white_pieces.index("king")
 
 def check_pawns(location, turn):
     moves_list = []
@@ -615,49 +659,50 @@ while run:
             x_coord = (event.pos[0] - board_start_x) // grid_size
             y_coord = (event.pos[1] - board_start_y) // grid_size
             click_coords = (x_coord, y_coord)  # Convert to index on grid
-            if turn_step <= 1:  # Whites turn
-                if click_coords in white_locations:
-                    selection = white_locations.index(click_coords)
-                    if turn_step == 0: turn_step = 1
-
-                if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
-                    move_sound.play()
-                    white_locations[selection] = click_coords
-                    if click_coords in black_locations:
-                        black_piece = black_locations.index(click_coords)  # Get index of black piece that was clicked on
-                        capture_sound.play()
-                        captured_pieces_white.append(black_pieces[black_piece])
-                        black_pieces.pop(black_piece)
-                        black_locations.pop(black_piece)
-
-                    black_options = check_options(black_pieces, black_locations, "black")
-                    white_options = check_options(white_pieces, white_locations, "white")
-
-                    turn_step = 2  # Increment turn
-                    selection = 100  # Deselect
-                    valid_moves = []  # Clear valid moves for further recalculation
-
-            if turn_step >= 2:  # Whites turn
-                if click_coords in black_locations:
-                    selection = black_locations.index(click_coords)
-                    if turn_step == 2: turn_step = 3
-
-                if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
-                    move_sound.play()
-                    black_locations[selection] = click_coords
+            if not is_in_check:
+                if turn_step <= 1:  # Whites turn
                     if click_coords in white_locations:
-                        white_piece = white_locations.index(click_coords)  # Get index of black piece that was clicked on
-                        capture_sound.play()
-                        captured_pieces_black.append(white_pieces[white_piece])
-                        white_pieces.pop(white_piece)
-                        white_locations.pop(white_piece)
+                        selection = white_locations.index(click_coords)
+                        if turn_step == 0: turn_step = 1
 
-                    black_options = check_options(black_pieces, black_locations, "black")
-                    white_options = check_options(white_pieces, white_locations, "white")
+                    if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
+                        move_sound.play()
+                        white_locations[selection] = click_coords
+                        if click_coords in black_locations:
+                            black_piece = black_locations.index(click_coords)  # Get index of black piece that was clicked on
+                            capture_sound.play()
+                            captured_pieces_white.append(black_pieces[black_piece])
+                            black_pieces.pop(black_piece)
+                            black_locations.pop(black_piece)
 
-                    turn_step = 0  # Increment turn
-                    selection = 100  # Deselect
-                    valid_moves = []  # Clear valid moves for further recalculation
+                        black_options = check_options(black_pieces, black_locations, "black")
+                        white_options = check_options(white_pieces, white_locations, "white")
+
+                        turn_step = 2  # Increment turn
+                        selection = 100  # Deselect
+                        valid_moves = []  # Clear valid moves for further recalculation
+
+                if turn_step >= 2:  # Whites turn
+                    if click_coords in black_locations:
+                        selection = black_locations.index(click_coords)
+                        if turn_step == 2: turn_step = 3
+
+                    if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
+                        move_sound.play()
+                        black_locations[selection] = click_coords
+                        if click_coords in white_locations:
+                            white_piece = white_locations.index(click_coords)  # Get index of black piece that was clicked on
+                            capture_sound.play()
+                            captured_pieces_black.append(white_pieces[white_piece])
+                            white_pieces.pop(white_piece)
+                            white_locations.pop(white_piece)
+
+                        black_options = check_options(black_pieces, black_locations, "black")
+                        white_options = check_options(white_pieces, white_locations, "white")
+
+                        turn_step = 0  # Increment turn
+                        selection = 100  # Deselect
+                        valid_moves = []  # Clear valid moves for further recalculation
 
         exit_button.handle_event(event)
 
