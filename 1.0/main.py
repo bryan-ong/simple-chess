@@ -19,6 +19,7 @@ RED = (255, 100, 100)
 SELECT_CIRCLE_COLOR = (125, 125, 125)
 DARKER_GRAY = (25, 25, 25)
 
+
 class Button:
     def __init__(self, text="", image=None, width=None, height=None, pos=(0, 0), text_color=DARK_GRAY,
                  bg_color=DARK_GREEN, hover_color=GREEN, action=None):
@@ -72,12 +73,12 @@ class Button:
 
 
 pygame.init()
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((0, 0), pygame.WINDOWMINIMIZED)
 pygame.display.set_caption("Simple Chess")
 Window.from_display_module().maximize()
-font = pygame.font.Font("assets/fonts/segoeui.ttf", 12)
-font_bold = pygame.font.Font("assets/fonts/segoeuib.ttf", 20)
-big_font = pygame.font.Font("assets/fonts/segoeuib.ttf", 32)
+font = pygame.font.Font("../assets/fonts/segoeui.ttf", 12)
+font_bold = pygame.font.Font("../assets/fonts/segoeuib.ttf", 20)
+big_font = pygame.font.Font("../assets/fonts/segoeuib.ttf", 32)
 timer = pygame.time.Clock()
 fps = 60
 grid_size = 100
@@ -88,7 +89,6 @@ board_size = board_grid_size * grid_size
 board_start_x = (screen.get_width() - board_size) // 2
 board_start_y = (screen.get_height() - board_size) // 2
 border_radius = 15
-is_in_check = False
 # shadow_surface = screen
 # shadow_surface.fill(pygame.Color(0, 0, 0))
 # shadow_mask = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
@@ -98,18 +98,17 @@ capture_area_width_factor = 0.6
 
 # Game variables and assets
 close_img = pygame.transform.scale(
-    pygame.image.load("assets/images/closebtn.png"),
+    pygame.image.load("../assets/images/closebtn.png"),
     (20, 20)
 )
 
-capture_sound = pygame.mixer.Sound("assets/sounds/capture.mp3")
-move_sound = pygame.mixer.Sound("assets/sounds/move-self.mp3")
+capture_sound = pygame.mixer.Sound("../assets/sounds/capture.mp3")
+move_sound = pygame.mixer.Sound("../assets/sounds/move.mp3")
 
 white_pieces = ["rook", "knight", "bishop", "king", "queen", "bishop", "knight", "rook",
                 "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn"]
 white_locations = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
                    (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1)]
-
 
 black_pieces = ["rook", "knight", "bishop", "king", "queen", "bishop", "knight", "rook",
                 "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn"]
@@ -127,41 +126,41 @@ turn_step = 0
 selection = 100
 valid_moves = []
 # Load assets for pieces
-black_queen = pygame.transform.scale(pygame.image.load("assets/images/qb.png"), piece_scale)
-black_queen_small = pygame.transform.scale(pygame.image.load("assets/images/qb.png"), piece_scale_small)
+black_queen = pygame.transform.scale(pygame.image.load("../assets/images/black_queen.png"), piece_scale)
+black_queen_small = pygame.transform.scale(pygame.image.load("../assets/images/black_queen.png"), piece_scale_small)
 
-white_queen = pygame.transform.scale(pygame.image.load("assets/images/qw.png"), piece_scale)
-white_queen_small = pygame.transform.scale(pygame.image.load("assets/images/qw.png"), piece_scale_small)
+white_queen = pygame.transform.scale(pygame.image.load("../assets/images/white_queen.png"), piece_scale)
+white_queen_small = pygame.transform.scale(pygame.image.load("../assets/images/white_queen.png"), piece_scale_small)
 
-black_king = pygame.transform.scale(pygame.image.load("assets/images/kb.png"), piece_scale)
-black_king_small = pygame.transform.scale(pygame.image.load("assets/images/kb.png"), piece_scale_small)
+black_king = pygame.transform.scale(pygame.image.load("../assets/images/black_king.png"), piece_scale)
+black_king_small = pygame.transform.scale(pygame.image.load("../assets/images/black_king.png"), piece_scale_small)
 
-white_king = pygame.transform.scale(pygame.image.load("assets/images/kw.png"), piece_scale)
-white_king_small = pygame.transform.scale(pygame.image.load("assets/images/kw.png"), piece_scale_small)
+white_king = pygame.transform.scale(pygame.image.load("../assets/images/white_king.png"), piece_scale)
+white_king_small = pygame.transform.scale(pygame.image.load("../assets/images/white_king.png"), piece_scale_small)
 
-black_bishop = pygame.transform.scale(pygame.image.load("assets/images/bb.png"), piece_scale)
-black_bishop_small = pygame.transform.scale(pygame.image.load("assets/images/bb.png"), piece_scale_small)
+black_bishop = pygame.transform.scale(pygame.image.load("../assets/images/black_bishop.png"), piece_scale)
+black_bishop_small = pygame.transform.scale(pygame.image.load("../assets/images/black_bishop.png"), piece_scale_small)
 
-white_bishop = pygame.transform.scale(pygame.image.load("assets/images/bw.png"), piece_scale)
-white_bishop_small = pygame.transform.scale(pygame.image.load("assets/images/bw.png"), piece_scale_small)
+white_bishop = pygame.transform.scale(pygame.image.load("../assets/images/white_bishop.png"), piece_scale)
+white_bishop_small = pygame.transform.scale(pygame.image.load("../assets/images/white_bishop.png"), piece_scale_small)
 
-black_rook = pygame.transform.scale(pygame.image.load("assets/images/rb.png"), piece_scale)
-black_rook_small = pygame.transform.scale(pygame.image.load("assets/images/rb.png"), piece_scale_small)
+black_rook = pygame.transform.scale(pygame.image.load("../assets/images/black_rook.png"), piece_scale)
+black_rook_small = pygame.transform.scale(pygame.image.load("../assets/images/black_rook.png"), piece_scale_small)
 
-white_rook = pygame.transform.scale(pygame.image.load("assets/images/rw.png"), piece_scale)
-white_rook_small = pygame.transform.scale(pygame.image.load("assets/images/rw.png"), piece_scale_small)
+white_rook = pygame.transform.scale(pygame.image.load("../assets/images/white_rook.png"), piece_scale)
+white_rook_small = pygame.transform.scale(pygame.image.load("../assets/images/white_rook.png"), piece_scale_small)
 
-black_knight = pygame.transform.scale(pygame.image.load("assets/images/nb.png"), piece_scale)
-black_knight_small = pygame.transform.scale(pygame.image.load("assets/images/nb.png"), piece_scale_small)
+black_knight = pygame.transform.scale(pygame.image.load("../assets/images/black_knight.png"), piece_scale)
+black_knight_small = pygame.transform.scale(pygame.image.load("../assets/images/black_knight.png"), piece_scale_small)
 
-white_knight = pygame.transform.scale(pygame.image.load("assets/images/nw.png"), piece_scale)
-white_knight_small = pygame.transform.scale(pygame.image.load("assets/images/nw.png"), piece_scale_small)
+white_knight = pygame.transform.scale(pygame.image.load("../assets/images/white_knight.png"), piece_scale)
+white_knight_small = pygame.transform.scale(pygame.image.load("../assets/images/white_knight.png"), piece_scale_small)
 
-black_pawn = pygame.transform.scale(pygame.image.load("assets/images/pb.png"), piece_scale)
-black_pawn_small = pygame.transform.scale(pygame.image.load("assets/images/pb.png"), piece_scale_small)
+black_pawn = pygame.transform.scale(pygame.image.load("../assets/images/black_pawn.png"), piece_scale)
+black_pawn_small = pygame.transform.scale(pygame.image.load("../assets/images/black_pawn.png"), piece_scale_small)
 
-white_pawn = pygame.transform.scale(pygame.image.load("assets/images/pw.png"), piece_scale)
-white_pawn_small = pygame.transform.scale(pygame.image.load("assets/images/pw.png"), piece_scale_small)
+white_pawn = pygame.transform.scale(pygame.image.load("../assets/images/white_pawn.png"), piece_scale)
+white_pawn_small = pygame.transform.scale(pygame.image.load("../assets/images/white_pawn.png"), piece_scale_small)
 
 white_assets = [white_pawn, white_queen, white_king, white_knight, white_rook, white_bishop]
 white_assets_small = [white_pawn_small, white_queen_small, white_king_small, white_knight_small, white_rook_small,
@@ -171,8 +170,6 @@ black_assets_small = [black_pawn_small, black_queen_small, black_king_small, bla
                       black_bishop_small]
 
 piece_list = ["pawn", "queen", "king", "knight", "rook", "bishop"]
-
-
 
 top_bar = pygame.Rect(
     0, 0,
@@ -210,11 +207,8 @@ exit_button = Button(
 )
 
 
-# Check variables / flashing counter
-
 # Draw main game board
 def draw_board():
-
     # Turn indicator
     if turn_step <= 1:
         pygame.draw.rect(screen, RED, (
@@ -276,6 +270,7 @@ def draw_board():
         x_offset, board_start_y + board_size + border_radius,
         grid_size * 1.5, 40,
     ), border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
+
 
 def draw_valid_moves(moves):
     if turn_step <= 1:
@@ -404,7 +399,6 @@ def draw_captured_pieces():
             text_y = white_y + piece_height / 2 - text_surf.get_height() / 2
             screen.blit(text_surf, (x_offset + grid_size * 1.25 + 50, text_y))
 
-
     # Displaying total material value for pieces
     for piece in captured_pieces_white:
         if piece == "pawn":
@@ -440,9 +434,11 @@ def draw_captured_pieces():
     if black_material_count > 0:
         text_surf = font_bold.render(str(black_material_count), True, WHITE)
         text_surf_2 = font_bold.render("Total Material: ", True, WHITE)
-        text_y = center_y + vertical_gap + (-1.5 * (piece_height + vertical_gap)) + distance_from_middle + 20 # Font size
+        text_y = center_y + vertical_gap + (
+                -1.5 * (piece_height + vertical_gap)) + distance_from_middle + 20  # Font size
         screen.blit(text_surf, (x_offset + 50 + grid_size * 1.25, text_y))
         screen.blit(text_surf_2, (x_offset, text_y))
+
 
 # Function to check valid options for alive pieces
 def check_options(pieces, locations, turn):
@@ -467,9 +463,6 @@ def check_options(pieces, locations, turn):
 
     return all_moves_list
 
-def check_check():
-    if turn_step < 2:
-        king_index = white_pieces.index("king")
 
 def check_pawns(location, turn):
     moves_list = []
@@ -485,7 +478,6 @@ def check_pawns(location, turn):
                     options[1] not in black_locations and
                     y == 1):  # Only first move of pawn can go 2 squares
                 moves_list.append(options[1])
-
 
         if options[2] in black_locations:
             moves_list.append(options[2])
@@ -536,6 +528,7 @@ def check_knights(location, turn):
 
     return moves_list
 
+
 def check_rooks(location, turn, range):
     moves_list = []
 
@@ -550,7 +543,6 @@ def check_rooks(location, turn, range):
     x = location[0]
     y = location[1]
 
-
     for dx, dy in directions:
         distance = 1
         while True:
@@ -559,20 +551,22 @@ def check_rooks(location, turn, range):
             if distance > range:
                 break
 
-            if not (0 <= current_loc[0] < board_grid_size and 0 <= current_loc[1] < board_grid_size): # If move isn't inside board, break
+            if not (0 <= current_loc[0] < board_grid_size and 0 <= current_loc[
+                1] < board_grid_size):  # If move isn't inside board, break
                 break
 
-            if current_loc not in enemy_list and current_loc not in ally_list: # Check for empty spot and increment distance and continue
+            if current_loc not in enemy_list and current_loc not in ally_list:  # Check for empty spot and increment distance and continue
                 moves_list.append(current_loc)
                 distance += 1
                 continue
 
-            if current_loc in enemy_list: # If found enemy then break
+            if current_loc in enemy_list:  # If found enemy then break
                 moves_list.append(current_loc)
 
             break
 
     return moves_list
+
 
 def check_bishops(location, turn, range):
     moves_list = []
@@ -584,10 +578,10 @@ def check_bishops(location, turn, range):
         enemy_list = white_locations
         ally_list = black_locations
 
-    directions = [(1, 1), (-1, 1), (-1, -1), (1, -1)]  # Bottom-right, Bottom-left, Top-left, Top-right as pygame reads y downwards
+    directions = [(1, 1), (-1, 1), (-1, -1),
+                  (1, -1)]  # Bottom-right, Bottom-left, Top-left, Top-right as pygame reads y downwards
     x = location[0]
     y = location[1]
-
 
     for dx, dy in directions:
         distance = 1
@@ -597,36 +591,103 @@ def check_bishops(location, turn, range):
             if distance > range:
                 break
 
-            if not (0 <= current_loc[0] < board_grid_size and 0 <= current_loc[1] < board_grid_size): # If move isn't inside board, break
+            if not (0 <= current_loc[0] < board_grid_size and 0 <= current_loc[
+                1] < board_grid_size):  # If move isn't inside board, break
                 break
 
-            if current_loc not in enemy_list and current_loc not in ally_list: # Check for empty spot and increment distance and continue
+            if current_loc not in enemy_list and current_loc not in ally_list:  # Check for empty spot and increment distance and continue
                 moves_list.append(current_loc)
                 distance += 1
                 continue
 
-            if current_loc in enemy_list: # If found enemy then break
+            if current_loc in enemy_list:  # If found enemy then break
                 moves_list.append(current_loc)
 
             break
 
     return moves_list
 
+
 def check_kings(location, turn):
     # Added range parameter for more reusability and flexibility
     return check_bishops(location, turn, 1) + check_rooks(location, turn, 1)
 
+
 def check_queens(location, turn):
     return check_bishops(location, turn, 8) + check_rooks(location, turn, 8)
+
+
+def is_in_check(turn):
+    enemy_options = black_options if turn == "white" else white_options
+    king_pos = get_king_pos(turn)
+    for moves in enemy_options:
+        if king_pos in moves:
+            return True
+    return False
+
+
+def get_valid_moves_while_in_check(turn, piece_index, current_moves):
+    valid_moves = []
+    ally_locations = white_locations if turn == "white" else black_locations
+    enemy_locations = black_locations if turn == "white" else white_locations
+    ally_pieces = white_pieces if turn == "white" else black_pieces
+    enemy_pieces = black_pieces if turn == "white" else white_pieces
+
+    original_pos = ally_locations[piece_index]
+
+    for move in current_moves:
+        # Simulate board
+        temp_ally_pieces = ally_pieces.copy()
+        temp_enemy_pieces = enemy_pieces.copy()
+        temp_ally_locations = ally_locations.copy()
+        temp_enemy_locations = enemy_locations.copy()
+
+        if move in enemy_locations:
+            captured_index = enemy_locations.index(move)
+            temp_enemy_locations.pop(captured_index)
+            temp_enemy_pieces.pop(captured_index)
+
+        if turn == "white":
+            temp_enemy_options = check_options(black_pieces, temp_enemy_locations, "black")
+        else:
+            temp_enemy_options = check_options(white_pieces, temp_enemy_locations, "white")
+
+        king_pos = move if ally_pieces[piece_index] == "king" else get_king_pos(turn) # Update king pos if he has moved
+
+        king_safe = True
+        for moves in temp_enemy_options:
+            if king_pos in moves:
+                king_safe = False
+                break
+
+        # Append the move to valid moves if this gets king out of check
+        if king_safe:
+            valid_moves.append(move)
+
+    # Simulating each and every move is computationally expensive, but it gets the job done 👍
+    return valid_moves
+
+
+def get_king_pos(turn):
+    locations = white_locations if turn == "white" else black_locations
+    pieces = white_pieces if turn == "white" else black_pieces
+    king_index = pieces.index("king")
+    return locations[king_index]
+
 
 # Gets just the valid moves for the currently selected piece
 def filter_valid_moves():
     if turn_step <= 1:
+        turn = "white"
         options_list = white_options
     else:
+        turn = "black"
         options_list = black_options
 
     valid_options = options_list[selection]
+
+    if is_in_check(turn):
+        valid_options = get_valid_moves_while_in_check(turn, selection, valid_options)
 
     return valid_options
 
@@ -642,6 +703,15 @@ while run:
 
     draw_misc()
     draw_board()
+
+    if turn_step == 0:  # White's turn starting
+        if is_in_check("white"):
+            print("White is in check!")
+
+    elif turn_step == 2:  # Black's turn starting
+        if is_in_check("black"):
+            print("Black is in check!")
+
 
     if selection != 100:
         valid_moves = filter_valid_moves()
@@ -659,50 +729,54 @@ while run:
             x_coord = (event.pos[0] - board_start_x) // grid_size
             y_coord = (event.pos[1] - board_start_y) // grid_size
             click_coords = (x_coord, y_coord)  # Convert to index on grid
-            if not is_in_check:
-                if turn_step <= 1:  # Whites turn
-                    if click_coords in white_locations:
-                        selection = white_locations.index(click_coords)
-                        if turn_step == 0: turn_step = 1
 
-                    if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
-                        move_sound.play()
-                        white_locations[selection] = click_coords
-                        if click_coords in black_locations:
-                            black_piece = black_locations.index(click_coords)  # Get index of black piece that was clicked on
-                            capture_sound.play()
-                            captured_pieces_white.append(black_pieces[black_piece])
-                            black_pieces.pop(black_piece)
-                            black_locations.pop(black_piece)
 
-                        black_options = check_options(black_pieces, black_locations, "black")
-                        white_options = check_options(white_pieces, white_locations, "white")
 
-                        turn_step = 2  # Increment turn
-                        selection = 100  # Deselect
-                        valid_moves = []  # Clear valid moves for further recalculation
+            if turn_step <= 1:  # Whites turn
+                if click_coords in white_locations:
+                    selection = white_locations.index(click_coords)
+                    if turn_step == 0: turn_step = 1
 
-                if turn_step >= 2:  # Whites turn
+                if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
+                    move_sound.play()
+                    white_locations[selection] = click_coords
                     if click_coords in black_locations:
-                        selection = black_locations.index(click_coords)
-                        if turn_step == 2: turn_step = 3
+                        black_piece = black_locations.index(
+                            click_coords)  # Get index of black piece that was clicked on
+                        capture_sound.play()
+                        captured_pieces_white.append(black_pieces[black_piece])
+                        black_pieces.pop(black_piece)
+                        black_locations.pop(black_piece)
 
-                    if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
-                        move_sound.play()
-                        black_locations[selection] = click_coords
-                        if click_coords in white_locations:
-                            white_piece = white_locations.index(click_coords)  # Get index of black piece that was clicked on
-                            capture_sound.play()
-                            captured_pieces_black.append(white_pieces[white_piece])
-                            white_pieces.pop(white_piece)
-                            white_locations.pop(white_piece)
+                    black_options = check_options(black_pieces, black_locations, "black")
+                    white_options = check_options(white_pieces, white_locations, "white")
 
-                        black_options = check_options(black_pieces, black_locations, "black")
-                        white_options = check_options(white_pieces, white_locations, "white")
+                    turn_step = 2  # Increment turn
+                    selection = 100  # Deselect
+                    valid_moves = []  # Clear valid moves for further recalculation
 
-                        turn_step = 0  # Increment turn
-                        selection = 100  # Deselect
-                        valid_moves = []  # Clear valid moves for further recalculation
+            if turn_step >= 2:  # Whites turn
+                if click_coords in black_locations:
+                    selection = black_locations.index(click_coords)
+                    if turn_step == 2: turn_step = 3
+
+                if click_coords in valid_moves and selection != 100:  # Clicked on valid move square
+                    move_sound.play()
+                    black_locations[selection] = click_coords
+                    if click_coords in white_locations:
+                        white_piece = white_locations.index(
+                            click_coords)  # Get index of black piece that was clicked on
+                        capture_sound.play()
+                        captured_pieces_black.append(white_pieces[white_piece])
+                        white_pieces.pop(white_piece)
+                        white_locations.pop(white_piece)
+
+                    black_options = check_options(black_pieces, black_locations, "black")
+                    white_options = check_options(white_pieces, white_locations, "white")
+
+                    turn_step = 0  # Increment turn
+                    selection = 100  # Deselect
+                    valid_moves = []  # Clear valid moves for further recalculation
 
         exit_button.handle_event(event)
 
