@@ -62,9 +62,26 @@ class Game:
                 # Color from theme
                 color = theme.bg.light if (row + col) % 2 == 0 else theme.bg.dark
 
-                rect = pygame.Rect(col * SQSIZE + BOARD_START_X, row * SQSIZE + BOARD_START_Y, SQSIZE, SQSIZE)
-                pygame.draw.rect(self.surface, color, rect)
+                x = col * SQSIZE + BOARD_START_X
+                y = row * SQSIZE + BOARD_START_Y
 
+                if theme.rounded:
+                    if row == 0 and col == 0:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_top_left_radius=BORDER_RADIUS)
+                    elif row == 0 and col == COLS - 1:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_top_right_radius=BORDER_RADIUS)
+                    elif row == ROWS - 1 and col == 0:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_bottom_left_radius=BORDER_RADIUS)
+                    elif row == ROWS - 1 and col == COLS - 1:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_bottom_right_radius=BORDER_RADIUS)
+                    else:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE))
+                else:
+                    pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE))
 
 
     def show_coords(self):
@@ -138,8 +155,27 @@ class Game:
             for pos in [initial, final]:
                 color = theme.trace.light if (pos.row + pos.col) % 2 == 0 else theme.trace.dark
 
-                rect = (pos.col * SQSIZE + BOARD_START_X, pos.row * SQSIZE + BOARD_START_Y, SQSIZE, SQSIZE)
-                pygame.draw.rect(self.surface, color, rect)
+                x = pos.col * SQSIZE + BOARD_START_X
+                y = pos.row * SQSIZE + BOARD_START_Y
+
+                if theme.rounded:
+                    if pos.row == 0 and pos.col == 0:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_top_left_radius=BORDER_RADIUS)
+                    elif pos.row == 0 and pos.col == COLS - 1:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_top_right_radius=BORDER_RADIUS)
+                    elif pos.row == ROWS - 1 and pos.col == 0:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_bottom_left_radius=BORDER_RADIUS)
+                    elif pos.row == ROWS - 1 and pos.col == COLS - 1:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
+                                         border_bottom_right_radius=BORDER_RADIUS)
+                    else:
+                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE))
+                else:
+                    pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE))
+
 
     def show_hover(self):
         if self.hovered_square:

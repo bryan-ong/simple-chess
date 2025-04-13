@@ -26,7 +26,6 @@ class Main:
         board = self.game.board
         dragger = self.game.dragger
         shadow_surface = self.shadow_surface
-        clock = self.clock
 
         while 1:
             game.show_gui()
@@ -38,8 +37,8 @@ class Main:
             game.show_pieces()
             game.show_promotion(shadow_surface)
 
-            clock.tick(144)
-            print(clock.get_fps())
+            # clock.tick(144)
+            # print(clock.get_fps())
 
             for event in pygame.event.get():
                 hover_coords, is_hover_valid = dragger.grid_coords(
@@ -68,7 +67,6 @@ class Main:
                     if dragger.dragging:
                         dragger.undrag_piece()
                         (release_row, release_col), is_valid = dragger.grid_coords()
-
                         initial = Square(dragger.initial_row, dragger.initial_col)
                         final = Square(release_row, release_col)
                         move = Move(initial, final)
