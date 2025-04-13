@@ -45,6 +45,10 @@ class Dragger:
             pos = (self.mouseX, self.mouseY)
         adjusted_x = pos[0] - self.board_offset_x
         adjusted_y = pos[1] - self.board_offset_y
+
+        is_valid = (0 <= adjusted_x < BOARD_WIDTH and
+                    0 <= adjusted_y < BOARD_HEIGHT)
+
         row = adjusted_y // SQSIZE
         col = adjusted_x // SQSIZE
-        return row, col
+        return (row, col), is_valid

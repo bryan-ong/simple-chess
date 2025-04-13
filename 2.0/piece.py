@@ -25,7 +25,7 @@ class Piece:
         )
 
     def get_surf_with_size(self, texture, size):
-        return pygame.transform.scale(pygame.image.load(texture), (size, size))
+        return pygame.transform.scale(pygame.image.load(texture).convert_alpha(), (size, size)) # Apparently convert_alpha() makes the game run smoother
 
     def add_move(self, move):
         self.valid_moves.append(move)

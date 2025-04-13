@@ -1,10 +1,11 @@
-from game import Game
+import pygame
+import win32api
 # Screen dimensions
 
-BOARD_WIDTH = 800
-BOARD_HEIGHT = 800
-BOARD_START_X = Game.SCR_WIDTH - BOARD_WIDTH // 2
-BOARD_START_Y = Game.SCR_HEIGHT - BOARD_HEIGHT // 2
+BOARD_HEIGHT = int(win32api.GetSystemMetrics(1) / 1.35)
+BOARD_WIDTH = BOARD_HEIGHT
+BOARD_START_Y = (win32api.GetSystemMetrics(1) - BOARD_HEIGHT) // 2
+BOARD_START_X = (win32api.GetSystemMetrics(0) - BOARD_WIDTH) // 2
 
 # Board dimensions
 COLS = 8
@@ -12,7 +13,7 @@ ROWS = 8
 SQSIZE = BOARD_WIDTH // COLS
 PIECE_SIZE = int(SQSIZE * 0.9)
 SELECTED_PIECE_SIZE = PIECE_SIZE * 1.5
-
+BORDER_RADIUS = 15
 
 GREEN = (105, 146, 62)
 DARK_GREEN = (78, 120, 55)

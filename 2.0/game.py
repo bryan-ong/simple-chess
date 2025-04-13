@@ -11,19 +11,10 @@ from square import Square
 from piece import *
 from button import Button
 from soundmanager import SoundManager
-
+from OpenGLRenderer import OpenGLRenderer
 class Game:
-    SCR_WIDTH = None
-    SCR_HEIGHT = None
-
-    @classmethod
-    def init_class_vars(cls, screen):
-        cls.SCR_WIDTH = screen.get_width()
 
     def __init__(self, screen):
-        if Game.SCR_WIDTH is None:
-            Game.init_class_vars(screen) # Ensure we init HEIGHT and WIDTH
-
         self.board = Board()
         self.dragger = Dragger(BOARD_START_X, BOARD_START_Y)
         self.next_player = "white"
@@ -32,13 +23,79 @@ class Game:
         self.promotion_buttons = []
         self.surface = screen
         SoundManager().set_config(self.config)
+        self.last_dragged_piece = None
+        self.last_dragged_pos = None
+        self.renderer = OpenGLRenderer(screen.get_width(), screen.get_height())
 
-        # Render methods
-    def show_gui(self):
+        self.load_textures()
+
+    def load_textures(self):
+        # Load all piece textures
+        for row in range(ROWS):
+            for col in range(COLS):
+                square = self.board.squares[row][col]
+                if square.has_piece():
+                    piece = square.piece
+                    # Create a pygame surface for the piece
+                    surf = piece.get_surf_with_size(piece.texture, PIECE_SIZE)
+                    # Load into OpenGL
+                    key = f"piece_{row}_{col}"
+                    self.renderer.load_texture(surf, key)
+                    piece.texture_key = key
+
         theme = self.config.theme
-        rect = pygame.Rect(0,0, self.surface.get_width(), self.surface.get_height())
+        for row in range(ROWS):
+            for col in range(COLS):
+                color = theme.bg.light if (row + col) % 2 == 0 else theme.bg.dark
+                surf = pygame.Surface((SQSIZE, SQSIZE), pygame.SRCALPHA)
+                pygame.draw.rect(surf, color, (0, 0, SQSIZE, SQSIZE))
+                key = f"square_{row}_{col}"
+                self.renderer.load_texture(surf, key)
 
-        pygame.draw.rect(self.surface, theme.bg.dark, rect)
+    def show_gui(self):
+        # This should now be handled by OpenGL
+        pass
+
+    def show_board_misc(self):
+        # For OpenGL, we'll handle this differently
+        pass
+
+    def show_pieces(self):
+        # Render the board squares
+        for row in range(ROWS):
+            for col in range(COLS):
+                key = f"square_{row}_{col}"
+                x = col * SQSIZE + BOARD_START_X
+                y = row * SQSIZE + BOARD_START_Y
+                self.renderer.render_textured_quad(self.renderer.textures[key], x, y, SQSIZE, SQSIZE)
+
+        # Render pieces
+        for row in range(ROWS):
+            for col in range(COLS):
+                square = self.board.squares[row][col]
+                if square.has_piece() and not square.piece.is_dragged:
+                    piece = square.piece
+                    x = col * SQSIZE + BOARD_START_X
+                    y = row * SQSIZE + BOARD_START_Y
+                    self.renderer.render_textured_quad(self.renderer.textures[piece.texture_key],
+                                                       x, y, SQSIZE, SQSIZE)
+
+    def show_dragged_pieces(self):
+        if self.dragger.dragging and self.dragger.piece:
+            piece = self.dragger.piece
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            self.renderer.render_textured_quad(
+                self.renderer.textures[piece.texture_key],
+                mouse_x - SELECTED_PIECE_SIZE // 2,
+                mouse_y - SELECTED_PIECE_SIZE // 2,
+                SELECTED_PIECE_SIZE,
+                SELECTED_PIECE_SIZE
+            )
+    def show_turn_indicator(self):
+        color = self.config.theme.turn_indicator
+        if self.next_player == "white":
+            rect = pygame.Rect()
+        pygame.draw.rect()
 
     def show_bg(self):
         theme = self.config.theme
@@ -72,16 +129,16 @@ class Game:
                     lbl_pos = (col * SQSIZE + SQSIZE * 0.8 + BOARD_START_X, BOARD_HEIGHT - SQSIZE // 4 + BOARD_START_Y)
                     self.surface.blit(lbl, lbl_pos)
 
-    def show_pieces(self):
+    def show_initial_pieces(self):
         for row in range(ROWS):
             for col in range(COLS):
-                if self.board.squares[row][col].has_piece():
-                    piece = self.board.squares[row][col].piece
+                square = self.board.squares[row][col]
+                if square.has_piece():
+                    piece = square.piece
 
-                    rendered_size = PIECE_SIZE if piece.is_dragged == False else SELECTED_PIECE_SIZE
-
+                    rendered_size = PIECE_SIZE if not piece.is_dragged else SELECTED_PIECE_SIZE
                     img = piece.get_surf_with_size(piece.texture, rendered_size)
-                    img_center = col * SQSIZE + SQSIZE / 2 + BOARD_START_X, row * SQSIZE + SQSIZE / 2 + BOARD_START_Y  # Center image
+                    img_center = col * SQSIZE + SQSIZE / 2 + BOARD_START_X, row * SQSIZE + SQSIZE / 2 + BOARD_START_Y
 
                     piece.texture_rect = img.get_rect(
                         center=img_center if not piece.is_dragged else pygame.mouse.get_pos())
@@ -146,20 +203,20 @@ class Game:
                     row, col = final.row, final.col
                     center_row, center_col = ROWS // 2, COLS // 2
                     # Gets the direction to draw in, i.e the center
-                    draw_dir = (
-                        1 if col < center_col else -1,
-                        1 if row < center_row else -1
-                    )
+                    # draw_dir = (
+                    #   1 if col < center_col else -1,
+                    #   1 if row < center_row else -1
+                    # )
 
-                    # Calculate position based on quadrant
-                    if draw_dir == (1, 1):  # Top-left
-                        rect_pos = (col + 1, row + 0)
-                    elif draw_dir == (-1, 1):  # Top-right
-                        rect_pos = (col - 1, row + 0)
-                    elif draw_dir == (1, -1):  # Bottom-left
-                        rect_pos = (col + 1, row - 3)
-                    else:  # Bottom-right
-                        rect_pos = (col - 1, row - 3)
+                    # # Calculate position based on quadrant
+                    # if draw_dir == (1, 1):  # Top-left
+                    #     rect_pos = (col + 1, row + 0)
+                    # elif draw_dir == (-1, 1):  # Top-right
+                    #     rect_pos = (col - 1, row + 0)
+                    # elif draw_dir == (1, -1):  # Bottom-left
+                    #     rect_pos = (col + 1, row - 3)
+                    # else:  # Bottom-right
+                    #     rect_pos = (col - 1, row - 3)
 
                     brightened_color = tuple(min(255, int(channel + 50)) for channel in theme.bg.light)
 
@@ -167,39 +224,13 @@ class Game:
                     shadow_surface.set_alpha(255 * (theme.shadow_opacity * 2))
 
                     pygame.draw.rect(shadow_surface, "black", (
-                        BOARD_START_X, BOARD_START_Y, BOARD_WIDTH, BOARD_HEIGHT
+                        0, 0, BOARD_WIDTH, BOARD_HEIGHT
                     ))
 
                     self.surface.blit(shadow_surface, (BOARD_START_X, BOARD_START_Y))
 
-                    # queen_btn = Button(
-                    #     image=piece.get_surf_with_size(Queen(piece.color).texture, PIECE_SIZE), width=SQSIZE, height=SQSIZE, bg_color=brightened_color,
-                    #     pos=(rect_pos[0] * SQSIZE,
-                    #          rect_pos[1] * SQSIZE,),
-                    #     action=lambda: [self.board.set_promote_piece(piece, final, Queen), self.remove_promote_buttons()]
-                    # )
-                    # bishop_btn = Button(
-                    #     image=piece.get_surf_with_size(Bishop(piece.color).texture, PIECE_SIZE), width=SQSIZE, height=SQSIZE, bg_color=brightened_color,
-                    #     pos=(rect_pos[0] * SQSIZE,
-                    #          (rect_pos[1] + 1) * SQSIZE,),
-                    #     action=lambda: [self.board.set_promote_piece(piece, final, Bishop), self.remove_promote_buttons()]
-                    # )
-                    # rook_btn = Button(
-                    #     image=piece.get_surf_with_size(Rook(piece.color).texture, PIECE_SIZE), width=SQSIZE, height=SQSIZE, bg_color=brightened_color,
-                    #     pos=(rect_pos[0] * SQSIZE,
-                    #          (rect_pos[1] + 2) * SQSIZE,),
-                    #     action=lambda: [self.board.set_promote_piece(piece, final, Rook), self.remove_promote_buttons()]
-                    # )
-                    #
-                    # knight_btn = Button(
-                    #     image=piece.get_surf_with_size(Knight(piece.color).texture, PIECE_SIZE), width=SQSIZE, height=SQSIZE, bg_color=brightened_color,
-                    #     pos=(rect_pos[0] * SQSIZE,
-                    #          (rect_pos[1] + 3) * SQSIZE,),
-                    #     action=lambda: [self.board.set_promote_piece(piece, final, Knight), self.remove_promote_buttons()]
-                    # )
 
-                    # I am going to try something
-
+                    # I am going to try something ( Had 4 separate button initializations, very similar so it can be done in a for loop )
                     def create_promotion_callback(piece, final, Piece_class):
                         return lambda: [
                             self.board.set_promote_piece(piece, final, Piece_class),
@@ -209,8 +240,8 @@ class Game:
                     for idx, Piece_class in enumerate([Queen, Bishop, Rook, Knight]):
                         button = Button(
                             image=piece.get_surf_with_size(Piece_class(piece.color).texture, PIECE_SIZE), width=SQSIZE, height=SQSIZE, bg_color=brightened_color,
-                                pos=(rect_pos[0] * SQSIZE + BOARD_START_X,
-                                     (rect_pos[1] + idx) * SQSIZE + BOARD_START_Y,),
+                                pos=(col * SQSIZE + BOARD_START_X,
+                                     (row + idx if piece.color == "white" else (-idx - 1)) * SQSIZE + BOARD_START_Y + (0 if piece.color == "white" else BOARD_HEIGHT)),
                                 action=create_promotion_callback(piece, final, Piece_class)
                         )
                         self.promotion_buttons.append(button)
@@ -231,6 +262,8 @@ class Game:
 
     def change_theme(self):
         self.config.change_theme()
+    def randomize_theme(self):
+        self.config.randomize_theme()
 
     def reset(self):
         self.__init__(self.surface)
