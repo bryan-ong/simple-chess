@@ -7,16 +7,13 @@ from square import Square
 from move import Move
 from soundmanager import SoundManager
 from pygame.locals import *
+
 class Main:
 
     def __init__(self):
         pygame.mixer.pre_init(44100, 16, 1, 4096)
         pygame.init()
-        pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLEBUFFERS, 1)
-        pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLESAMPLES, 4)
-        pygame.display.gl_set_attribute(pygame.GL_DEPTH_SIZE, 24)
-
-        self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN | DOUBLEBUF | OPENGL)
+        self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN | DOUBLEBUF)
         pygame.display.set_caption("Chess")
         Game.SCR_WIDTH = self.screen.get_width()
         Game.SCR_HEIGHT = self.screen.get_height()
@@ -30,15 +27,18 @@ class Main:
         dragger = self.game.dragger
         shadow_surface = self.shadow_surface
         clock = self.clock
-        game.show_gui()
-        game.show_initial_pieces()
 
         while 1:
-            game.renderer.begin_frame()
-
+            game.show_gui()
+            game.show_bg()
+            game.show_last_move()
+            game.show_coords()
+            game.show_hover()
+            game.show_moves(shadow_surface)
             game.show_pieces()
-            game.show_dragged_pieces()
+            game.show_promotion(shadow_surface)
 
+            clock.tick(144)
             print(clock.get_fps())
 
             for event in pygame.event.get():
@@ -102,8 +102,7 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
-            game.renderer.end_frame()
-            clock.tick(144)
+            pygame.display.update()
 
 
 main = Main()

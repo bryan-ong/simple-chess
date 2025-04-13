@@ -11,7 +11,7 @@ from square import Square
 from piece import *
 from button import Button
 from soundmanager import SoundManager
-from OpenGLRenderer import OpenGLRenderer
+
 class Game:
 
     def __init__(self, screen):
@@ -25,72 +25,29 @@ class Game:
         SoundManager().set_config(self.config)
         self.last_dragged_piece = None
         self.last_dragged_pos = None
-        self.renderer = OpenGLRenderer(screen.get_width(), screen.get_height())
 
-        self.load_textures()
 
-    def load_textures(self):
-        # Load all piece textures
-        for row in range(ROWS):
-            for col in range(COLS):
-                square = self.board.squares[row][col]
-                if square.has_piece():
-                    piece = square.piece
-                    # Create a pygame surface for the piece
-                    surf = piece.get_surf_with_size(piece.texture, PIECE_SIZE)
-                    # Load into OpenGL
-                    key = f"piece_{row}_{col}"
-                    self.renderer.load_texture(surf, key)
-                    piece.texture_key = key
-
-        theme = self.config.theme
-        for row in range(ROWS):
-            for col in range(COLS):
-                color = theme.bg.light if (row + col) % 2 == 0 else theme.bg.dark
-                surf = pygame.Surface((SQSIZE, SQSIZE), pygame.SRCALPHA)
-                pygame.draw.rect(surf, color, (0, 0, SQSIZE, SQSIZE))
-                key = f"square_{row}_{col}"
-                self.renderer.load_texture(surf, key)
-
+        # Render methods
     def show_gui(self):
-        # This should now be handled by OpenGL
-        pass
+        theme = self.config.theme
+        rect = pygame.Rect(0,0, self.surface.get_width(), self.surface.get_height())
+
+        pygame.draw.rect(self.surface, theme.bg.dark, rect)
+
+        self.show_board_misc()
+
 
     def show_board_misc(self):
-        # For OpenGL, we'll handle this differently
-        pass
+        theme = self.config.theme
+        # self.show_turn_indicator()
 
-    def show_pieces(self):
-        # Render the board squares
-        for row in range(ROWS):
-            for col in range(COLS):
-                key = f"square_{row}_{col}"
-                x = col * SQSIZE + BOARD_START_X
-                y = row * SQSIZE + BOARD_START_Y
-                self.renderer.render_textured_quad(self.renderer.textures[key], x, y, SQSIZE, SQSIZE)
+        # Board border
+        pygame.draw.rect(self.surface, theme.board_border.light, (
+            BOARD_START_X - BORDER_RADIUS,
+            BOARD_START_Y - BORDER_RADIUS,
+            BOARD_WIDTH + BORDER_RADIUS * 2,
+            BOARD_HEIGHT + BORDER_RADIUS * 2), border_radius=BORDER_RADIUS if theme.rounded else 0)
 
-        # Render pieces
-        for row in range(ROWS):
-            for col in range(COLS):
-                square = self.board.squares[row][col]
-                if square.has_piece() and not square.piece.is_dragged:
-                    piece = square.piece
-                    x = col * SQSIZE + BOARD_START_X
-                    y = row * SQSIZE + BOARD_START_Y
-                    self.renderer.render_textured_quad(self.renderer.textures[piece.texture_key],
-                                                       x, y, SQSIZE, SQSIZE)
-
-    def show_dragged_pieces(self):
-        if self.dragger.dragging and self.dragger.piece:
-            piece = self.dragger.piece
-            mouse_x, mouse_y = pygame.mouse.get_pos()
-            self.renderer.render_textured_quad(
-                self.renderer.textures[piece.texture_key],
-                mouse_x - SELECTED_PIECE_SIZE // 2,
-                mouse_y - SELECTED_PIECE_SIZE // 2,
-                SELECTED_PIECE_SIZE,
-                SELECTED_PIECE_SIZE
-            )
     def show_turn_indicator(self):
         color = self.config.theme.turn_indicator
         if self.next_player == "white":
@@ -129,7 +86,7 @@ class Game:
                     lbl_pos = (col * SQSIZE + SQSIZE * 0.8 + BOARD_START_X, BOARD_HEIGHT - SQSIZE // 4 + BOARD_START_Y)
                     self.surface.blit(lbl, lbl_pos)
 
-    def show_initial_pieces(self):
+    def show_pieces(self):
         for row in range(ROWS):
             for col in range(COLS):
                 square = self.board.squares[row][col]
