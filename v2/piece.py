@@ -21,7 +21,7 @@ class Piece:
 
     def set_texture(self):
         self.texture = os.path.join(
-            f"assets/images/{self.color}_{self.name}.png"
+            f"{IMAGE_DIR}\\{self.color}_{self.name}.png"
         )
 
     def get_surf_with_size(self, texture, size):

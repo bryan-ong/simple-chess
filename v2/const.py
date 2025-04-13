@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import win32api
 # Screen dimensions
@@ -23,7 +25,10 @@ RED = (255, 100, 100)
 SELECT_CIRCLE_COLOR = (125, 125, 125)
 DARKER_GRAY = (25, 25, 25)
 
-
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+SOUNDS_DIR = os.path.join(PROJECT_ROOT, 'assets', 'sounds')
+IMAGE_DIR = os.path.join(PROJECT_ROOT, 'assets', 'images')
 
 # Config
 LIGHT_SQUARE_COLOR = 234, 235, 200
