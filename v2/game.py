@@ -1,21 +1,20 @@
 import os.path
 
 import pygame
-import self
 
-from const import *
-from board import Board
+from board import *
 from dragger import Dragger
 from config import Config
 from square import Square
 from piece import *
 from button import Button
 from soundmanager import SoundManager
+from const import *
 
 class Game:
 
     def __init__(self, screen):
-        self.board = Board()
+        self.board = Board(2)
         self.dragger = Dragger(BOARD_START_X, BOARD_START_Y)
         self.next_player = "white"
         self.hovered_square = None
@@ -35,7 +34,13 @@ class Game:
         pygame.draw.rect(self.surface, theme.bg.dark, rect)
 
         self.show_board_misc()
+        top_bar = pygame.Rect(0, 0, SCR_WIDTH, 40)
 
+        darkened_color =  tuple(i * (0.95 - theme.shadow_opacity) for i in theme.bg.dark)
+        pygame.draw.rect(self.surface, darkened_color, top_bar)
+
+        exit_button.draw(self.surface)
+        minimize_button.draw(self.surface)
 
     def show_board_misc(self):
         theme = self.config.theme

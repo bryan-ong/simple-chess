@@ -98,7 +98,7 @@ capture_area_width_factor = 0.6
 
 # Game variables and assets
 close_img = pygame.transform.scale(
-    pygame.image.load("../assets/images/closebtn.png"),
+    pygame.image.load("../assets/images/close_btn.png"),
     (20, 20)
 )
 

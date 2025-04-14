@@ -21,6 +21,25 @@ class Main:
         self.shadow_surface = pygame.Surface((BOARD_WIDTH, BOARD_HEIGHT), pygame.SRCALPHA)
         self.clock = pygame.time.Clock()
 
+    exit_button = Button(
+        image=exit_image,
+        width=40,
+        height=40,
+        pos=(SCR_WIDTH - 40, 0),
+        bg_color=(255, 0, 0),
+        hover_color=(255, 255, 255),
+        action=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT))
+    )
+    minimize_button = Button(
+        image=minimize_image,
+        width=40,
+        height=40,
+        pos=(SCR_WIDTH - 80, 0),
+        bg_color=(255, 0, 0),
+        hover_color=RED,
+        action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
+    )
+
     def mainloop(self):
         game = self.game
         board = self.game.board
@@ -99,6 +118,11 @@ class Main:
                 elif event.type == pygame.QUIT: # Quit app
                     pygame.quit()
                     sys.exit()
+
+            self.exit_button.draw(self.screen)
+            self.exit_button.handle_event()
+            self.minimize_button.draw(self.screen)
+            self.minimize_button.handle_event()
 
             pygame.display.update()
 

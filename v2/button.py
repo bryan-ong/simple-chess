@@ -1,10 +1,9 @@
-import pygame
 from const import *
-from color import *
+
 
 class Button:
     def __init__(self, text="", font=None, image=None, width=None, height=None, pos=(0, 0), text_color=(255, 0, 0),
-                 bg_color=DARK_GREEN, hover_color=GREEN, action=None):
+                 bg_color=(0, 0, 0), hover_color=(125, 25, 25), action=None):
         self.image = image
 
         if width is None:

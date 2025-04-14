@@ -8,15 +8,16 @@ from move import Move
 from soundmanager import SoundManager
 
 class Board:
-    def __init__(self):
+    def __init__(self, player_count):
         # Added 2 list comprehensions so that I can make dynamic sized boards in the future, not sure how useful it would be
-        self.squares = [[Square(row, col) for col in range(COLS)] for row in range(ROWS)]
+        self.squares = [[Square(row, col, self) for col in range(COLS)] for row in range(ROWS)]
         self._create()
         self._add_pieces("white")
         self._add_pieces("black")
         self.last_move = None
         self.pending_promotion = False
         self.promote_option = None
+        self.player_count = player_count
 
     def in_check(self, piece, move):
         temp_piece = copy.deepcopy(piece)
@@ -54,8 +55,6 @@ class Board:
                         if bool:
                             if not self.in_check(piece, move):
                                 piece.add_move(move)
-                            else:
-                                break # Add only the protecting move, so break the for loop and don't add any more
                         else:
                             piece.add_move(move)
 
@@ -117,7 +116,7 @@ class Board:
                     if self.squares[row][col-1].has_enemy_piece(piece.color):
                         left_pawn = self.squares[row][col-1].piece
                         if isinstance(left_pawn, Pawn):
-                            if left_pawn.en_passant:
+                            if left_pawn.can_get_passant_by_other:
                                 # print("left can passant")
                                 initial, final = Square(row, col), Square(final_r, col-1, left_pawn)
                                 move = Move(initial, final)
@@ -133,7 +132,7 @@ class Board:
                         right_pawn = self.squares[row][col + 1].piece
                         if isinstance(right_pawn, Pawn):
                             # print("right ", right_pawn.en_passant)
-                            if right_pawn.en_passant:
+                            if right_pawn.can_get_passant_by_other:
                                 initial, final = Square(row, col), Square(final_r, col + 1, right_pawn)
                                 move = Move(initial, final)
 
@@ -426,10 +425,10 @@ class Board:
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
         # ALL pawns
-        for col in range(COLS):
-            self.squares[row_pawn][col] = Square(row_pawn, col, Pawn(color))
+        # for col in range(COLS):
+        #     self.squares[row_pawn][col] = Square(row_pawn, col, Pawn(color, self))
             # self.squares[4][col] = Square(row_pawn, col, Pawn(color))
 
         pieces = (Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
         for i, piece in enumerate(pieces):
-            self.squares[row_other][i] = Square(row_other, i, piece(color))
+            self.squares[row_other][i] = Square(row_other, i, piece(color, self))

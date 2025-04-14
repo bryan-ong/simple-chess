@@ -1,17 +1,14 @@
+
 import os
 
 import pygame
 import win32api
-from win32api import GetSystemMetrics
-from button import Button
 # Screen dimensions
 
-SCR_HEIGHT = GetSystemMetrics(1)
-SCR_WIDTH = GetSystemMetrics(0)
-BOARD_HEIGHT = int(SCR_HEIGHT / 1.35)
+BOARD_HEIGHT = int(win32api.GetSystemMetrics(1) / 1.35)
 BOARD_WIDTH = BOARD_HEIGHT
-BOARD_START_Y = (SCR_HEIGHT - BOARD_HEIGHT) // 2
-BOARD_START_X = (SCR_WIDTH - BOARD_WIDTH) // 2
+BOARD_START_Y = (win32api.GetSystemMetrics(1) - BOARD_HEIGHT) // 2
+BOARD_START_X = (win32api.GetSystemMetrics(0) - BOARD_WIDTH) // 2
 
 # Board dimensions
 COLS = 8
@@ -33,17 +30,6 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 SOUNDS_DIR = os.path.join(PROJECT_ROOT, 'assets', 'sounds')
 IMAGE_DIR = os.path.join(PROJECT_ROOT, 'assets', 'images')
-
-exit_image = pygame.transform.scale(
-    pygame.image.load("../assets/images/close_btn.png"),
-    (20, 20)
-)
-
-minimize_image = pygame.transform.scale(
-    pygame.image.load("../assets/images/minimize_btn.png"),
-    (20, 20)
-)
-
 
 # Config
 LIGHT_SQUARE_COLOR = 234, 235, 200
