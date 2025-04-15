@@ -1,6 +1,8 @@
+import pygame.mouse
+
 from const import *
 
-
+# https://python-forum.io/thread-25114.html
 class Button:
     def __init__(self, text="", font=None, image=None, width=None, height=None, pos=(0, 0), text_color=(255, 0, 0),
                  bg_color=(0, 0, 0), hover_color=(125, 25, 25), action=None):
@@ -28,10 +30,12 @@ class Button:
         self.current_color = bg_color
         self.action = action
         self.is_hovered = False
+        self.pressed = False
 
     def draw(self, surface):
-        if not self.image or self.is_hovered or self.bg_color:
-            pygame.draw.rect(surface, self.current_color, self.rect)
+        self.check_hover()
+        # if not self.image or self.is_hovered:
+        pygame.draw.rect(surface, self.current_color, self.rect)
 
         if self.image:
             surface.blit(self.image, self.image_rect)
@@ -39,18 +43,36 @@ class Button:
         if self.text:
             surface.blit(self.text_surf, self.text_rect)
 
-    def check_hover(self, mouse_pos):
+
+    def draw_and_handle(self, surface, remove_after=True):
+        self.draw(surface)
+        self.handle_click(remove_after)
+
+    def check_hover(self):
         # Check if hovered by comparing with mouse
-        self.is_hovered = self.rect.collidepoint(mouse_pos)
+        self.is_hovered = self.rect.collidepoint(pygame.mouse.get_pos())
         self.current_color = self.hover_color if self.is_hovered else self.bg_color
         return self.is_hovered
 
-    def handle_event(self):
-        if self.rect.collidepoint(pygame.mouse.get_pos()) and self.action:
-            if pygame.mouse.get_pressed()[0]: # Originally used pygame events but this is easier as we do not need to run it inside the event if statement, just the main loop for rendering
+    def handle_click(self, remove_after=True):
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+
+        # Check if mouse is over the button
+        if self.rect.collidepoint(mouse_pos):
+            if not mouse_pressed and self.pressed:
+                if remove_after:
+                    self.remove_button()
                 self.action()
-                return True
-        return False
+                self.pressed = False
+                return
+            elif mouse_pressed and not self.pressed:
+                self.pressed = True
+                print("pressed")
+                return
+        else:
+            self.pressed = False
+            return
 
     def remove_button(self):
         del self

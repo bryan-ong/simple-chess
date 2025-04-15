@@ -7,7 +7,7 @@ from square import Square
 from move import Move
 from soundmanager import SoundManager
 from pygame.locals import *
-
+# Adapted from https://www.youtube.com/watch?v=OpL0Gcfn4B4
 class Main:
 
     def __init__(self):
@@ -18,27 +18,10 @@ class Main:
         Game.SCR_WIDTH = self.screen.get_width()
         Game.SCR_HEIGHT = self.screen.get_height()
         self.game = Game(self.screen)
-        self.shadow_surface = pygame.Surface((BOARD_WIDTH, BOARD_HEIGHT), pygame.SRCALPHA)
+        self.shadow_surface = pygame.Surface((SCR_WIDTH, SCR_HEIGHT), pygame.SRCALPHA)
         self.clock = pygame.time.Clock()
 
-    exit_button = Button(
-        image=exit_image,
-        width=40,
-        height=40,
-        pos=(SCR_WIDTH - 40, 0),
-        bg_color=(255, 0, 0),
-        hover_color=(255, 255, 255),
-        action=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT))
-    )
-    minimize_button = Button(
-        image=minimize_image,
-        width=40,
-        height=40,
-        pos=(SCR_WIDTH - 80, 0),
-        bg_color=(255, 0, 0),
-        hover_color=RED,
-        action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
-    )
+
 
     def mainloop(self):
         game = self.game
@@ -47,7 +30,9 @@ class Main:
         shadow_surface = self.shadow_surface
 
         while 1:
-            game.show_gui()
+            # game.show_gui()
+            game.show_turn_indicator()
+            game.show_board_misc()
             game.show_bg()
             game.show_last_move()
             game.show_coords()
@@ -55,9 +40,10 @@ class Main:
             game.show_moves(shadow_surface)
             game.show_pieces()
             game.show_promotion(shadow_surface)
+            game.show_checkmate(shadow_surface)
 
-            # clock.tick(144)
-            # print(clock.get_fps())
+            self.clock.tick()
+            print(self.clock.get_fps())
 
             for event in pygame.event.get():
                 hover_coords, is_hover_valid = dragger.grid_coords(
@@ -75,9 +61,10 @@ class Main:
                     if board.squares[clicked_row][clicked_col].has_piece() and not board.pending_promotion:
                         piece = board.squares[clicked_row][clicked_col].piece
                         if piece.color == game.next_player:
-                            board.calc_moves(piece, clicked_row, clicked_col, bool=True)
+                            board.calc_moves(piece, clicked_row, clicked_col)
                             dragger.save_initial(event.pos)
                             dragger.drag_piece(piece)
+
                 elif event.type == pygame.MOUSEMOTION:  # Mouse motion
                     dragger.update_mouse(event.pos)
 
@@ -86,22 +73,19 @@ class Main:
                     if dragger.dragging:
                         dragger.undrag_piece()
                         (release_row, release_col), is_valid = dragger.grid_coords()
-                        initial = Square(dragger.initial_row, dragger.initial_col)
-                        final = Square(release_row, release_col)
+                        initial = Square(dragger.initial_row, dragger.initial_col, board)
+                        final = Square(release_row, release_col, board)
                         move = Move(initial, final)
 
                         game.show_hover()
                         if board.valid_move(dragger.piece, move): # Is the move valid
                             # Normal capture
                             # print("valid")
-
-                            capture = board.squares[release_row][release_col].has_piece()
-                            board.check_promote(dragger.piece, move.final)
+                            board.check_promote(dragger.piece, final)
+                            board.was_last_move_capture = board.squares[release_row][release_col].has_piece()
                             board.move(dragger.piece, move)
 
-                            board.set_true_en_passant(dragger.piece)
                             game.next_turn()
-                            SoundManager().play("capture" if capture else "move")
 
 
                 elif event.type == pygame.KEYDOWN: # Change theme hotkey
@@ -119,10 +103,6 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
-            self.exit_button.draw(self.screen)
-            self.exit_button.handle_event()
-            self.minimize_button.draw(self.screen)
-            self.minimize_button.handle_event()
 
             pygame.display.update()
 

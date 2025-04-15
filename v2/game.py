@@ -9,9 +9,11 @@ from square import Square
 from piece import *
 from button import Button
 from soundmanager import SoundManager
-from const import *
 
+from const import *
 class Game:
+
+
 
     def __init__(self, screen):
         self.board = Board(2)
@@ -25,26 +27,83 @@ class Game:
         self.last_dragged_piece = None
         self.last_dragged_pos = None
 
+        self.checkmate_prompt = Button(
+            text="",
+            width=200,
+            height=150,
+            pos=(SCR_WIDTH // 2, SCR_HEIGHT // 2),
+            action=lambda: print("hello")
+        )
 
+        self.turn_indicator_white = pygame.Rect(
+            BOARD_START_X - BORDER_RADIUS * 2,
+            BOARD_START_Y + BOARD_WIDTH / 2 + BORDER_RADIUS * 2,
+            BOARD_WIDTH + BORDER_RADIUS * 2 * 2,
+            BOARD_WIDTH / 2)
+
+        self.turn_indicator_black = pygame.Rect(
+            BOARD_START_X - BORDER_RADIUS * 2,
+            BOARD_START_Y - BORDER_RADIUS * 2,
+            BOARD_WIDTH + BORDER_RADIUS * 2 * 2,
+            BOARD_WIDTH / 2)
         # Render methods
+
+        self.bg_rect = pygame.Rect(0, 0, self.surface.get_width(), self.surface.get_height())
+        self.top_bar = pygame.Rect(0, 0, SCR_WIDTH, 40)
+
     def show_gui(self):
         theme = self.config.theme
-        rect = pygame.Rect(0,0, self.surface.get_width(), self.surface.get_height())
 
-        pygame.draw.rect(self.surface, theme.bg.dark, rect)
+        pygame.draw.rect(self.surface, theme.bg.dark, self.bg_rect)
 
-        self.show_board_misc()
-        top_bar = pygame.Rect(0, 0, SCR_WIDTH, 40)
 
-        darkened_color =  tuple(i * (0.95 - theme.shadow_opacity) for i in theme.bg.dark)
-        pygame.draw.rect(self.surface, darkened_color, top_bar)
+        darkened_color = tuple(i * (0.95 - theme.shadow_opacity) for i in theme.bg.dark)
+        pygame.draw.rect(self.surface, darkened_color, self.top_bar)
 
-        exit_button.draw(self.surface)
-        minimize_button.draw(self.surface)
+        exit_button = Button(
+            image=exit_image,
+            width=40,
+            height=40,
+            pos=(SCR_WIDTH - 40, 0),
+            bg_color=darkened_color,
+            hover_color=RED,
+            action=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT))
+        )
+        minimize_button = Button(
+            image=minimize_image,
+            width=40,
+            height=40,
+            pos=(SCR_WIDTH - 80, 0),
+            bg_color=darkened_color,
+            hover_color=RED,
+            action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
+        )
+
+        exit_button.draw_and_handle(self.surface)
+        minimize_button.draw_and_handle(self.surface)
+
+        title_surf = pygame.font.SysFont('monospace', 38, bold=True).render("Chess", True, theme.bg.light)
+
+        self.surface.blit(title_surf, (10, 0))
+
+
+    def show_checkmate(self, shadow_surface):
+        if self.board.checkmated:
+            self.darken_area(shadow_surface, (0, 40), (SCR_WIDTH, SCR_HEIGHT - 40))
+
+
+
+        # reset_button = Button(
+        #     text="New Game",
+        #     width=90,
+        #     height=50,
+        #     action=lambda : self.board.__init__(2)
+        # )
+
+        # self.checkmate_prompt.draw_and_handle(self.surface, True)
 
     def show_board_misc(self):
         theme = self.config.theme
-        # self.show_turn_indicator()
 
         # Board border
         pygame.draw.rect(self.surface, theme.board_border.light, (
@@ -54,10 +113,10 @@ class Game:
             BOARD_HEIGHT + BORDER_RADIUS * 2), border_radius=BORDER_RADIUS if theme.rounded else 0)
 
     def show_turn_indicator(self):
-        color = self.config.theme.turn_indicator
-        if self.next_player == "white":
-            rect = pygame.Rect()
-        pygame.draw.rect()
+        color = self.config.theme.turn_indicator.light
+
+        pygame.draw.rect(self.surface, color, self.turn_indicator_white if self.next_player == "black" else self.turn_indicator_black, border_radius=BORDER_RADIUS * 2)
+
 
     def show_bg(self):
         theme = self.config.theme
@@ -67,26 +126,24 @@ class Game:
                 # Color from theme
                 color = theme.bg.light if (row + col) % 2 == 0 else theme.bg.dark
 
-                x = col * SQSIZE + BOARD_START_X
-                y = row * SQSIZE + BOARD_START_Y
+                rect = pygame.Rect(col * SQSIZE + BOARD_START_X, row * SQSIZE + BOARD_START_Y, SQSIZE, SQSIZE)
 
                 if theme.rounded:
+                    kwargs = {}
                     if row == 0 and col == 0:
-                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
-                                         border_top_left_radius=BORDER_RADIUS)
+                        kwargs['border_top_left_radius'] = BORDER_RADIUS
                     elif row == 0 and col == COLS - 1:
-                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
-                                         border_top_right_radius=BORDER_RADIUS)
+                        kwargs['border_top_right_radius'] = BORDER_RADIUS
                     elif row == ROWS - 1 and col == 0:
-                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
-                                         border_bottom_left_radius=BORDER_RADIUS)
+                        kwargs['border_bottom_left_radius'] = BORDER_RADIUS
                     elif row == ROWS - 1 and col == COLS - 1:
-                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE),
-                                         border_bottom_right_radius=BORDER_RADIUS)
-                    else:
-                        pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE))
-                else:
-                    pygame.draw.rect(self.surface, color, (x, y, SQSIZE, SQSIZE))
+                        kwargs['border_bottom_right_radius'] = BORDER_RADIUS
+
+                    if kwargs:
+                        pygame.draw.rect(self.surface, color, rect, **kwargs)
+                        continue
+
+                pygame.draw.rect(self.surface, color, rect)
 
 
     def show_coords(self):
@@ -109,20 +166,33 @@ class Game:
                     self.surface.blit(lbl, lbl_pos)
 
     def show_pieces(self):
+
         for row in range(ROWS):
             for col in range(COLS):
                 square = self.board.squares[row][col]
-                if square.has_piece():
-                    piece = square.piece
+                if not square.has_piece():
+                    continue
 
-                    rendered_size = PIECE_SIZE if not piece.is_dragged else SELECTED_PIECE_SIZE
-                    img = piece.get_surf_with_size(piece.texture, rendered_size)
-                    img_center = col * SQSIZE + SQSIZE / 2 + BOARD_START_X, row * SQSIZE + SQSIZE / 2 + BOARD_START_Y
+                piece = square.piece
+                size = SELECTED_PIECE_SIZE if piece.is_dragged else PIECE_SIZE
 
-                    piece.texture_rect = img.get_rect(
-                        center=img_center if not piece.is_dragged else pygame.mouse.get_pos())
+                # Get or create texture
+                if not hasattr(piece, '_cached_texture') or piece._cached_size != size:
+                    piece._cached_texture = piece.get_surf_with_size(piece.texture, size)
+                    piece._cached_size = size
+                    piece.texture_rect = piece._cached_texture.get_rect()
 
-                    self.surface.blit(img, piece.texture_rect)
+                # Calculate position
+                if piece.is_dragged:
+                    pos = pygame.mouse.get_pos()
+                else:
+                    pos = (
+                        col * SQSIZE + BOARD_START_X + SQSIZE // 2,
+                        row * SQSIZE + BOARD_START_Y + SQSIZE // 2
+                    )
+
+                piece.texture_rect.center = pos
+                self.surface.blit(piece._cached_texture, piece.texture_rect)
 
     def show_moves(self, shadow_surface):
         theme = self.config.theme
@@ -149,6 +219,7 @@ class Game:
                         y,
                     ), SQSIZE * 0.175)
         self.surface.blit(shadow_surface, (BOARD_START_X, BOARD_START_Y))
+
 
     def show_last_move(self):
         theme = self.config.theme
@@ -188,6 +259,17 @@ class Game:
 
             pygame.draw.rect(self.surface, HOVERED_SQUARE_COLOR, rect, width=SQSIZE // 20)
 
+    def darken_area(self, shadow_surface, dest=(0,0), size=(100, 100)):
+
+        shadow_surface.fill((0, 0, 0, 0))
+        shadow_surface.set_alpha(255 * (self.config.theme.shadow_opacity * 2))
+
+        pygame.draw.rect(shadow_surface, "black", (
+            0, 0, size[0], size[1]
+        ))
+
+        self.surface.blit(shadow_surface, (dest[0], dest[1]))
+
     def show_promotion(self, shadow_surface):
         if not self.board.pending_promotion:
             return
@@ -199,72 +281,53 @@ class Game:
                 if piece.should_promote:
                     final = self.board.last_move.final
                     row, col = final.row, final.col
-                    center_row, center_col = ROWS // 2, COLS // 2
-                    # Gets the direction to draw in, i.e the center
-                    # draw_dir = (
-                    #   1 if col < center_col else -1,
-                    #   1 if row < center_row else -1
-                    # )
+                    brightened_color = tuple(min(255, int(channel + 25)) for channel in theme.bg.light)
 
-                    # # Calculate position based on quadrant
-                    # if draw_dir == (1, 1):  # Top-left
-                    #     rect_pos = (col + 1, row + 0)
-                    # elif draw_dir == (-1, 1):  # Top-right
-                    #     rect_pos = (col - 1, row + 0)
-                    # elif draw_dir == (1, -1):  # Bottom-left
-                    #     rect_pos = (col + 1, row - 3)
-                    # else:  # Bottom-right
-                    #     rect_pos = (col - 1, row - 3)
-
-                    brightened_color = tuple(min(255, int(channel + 50)) for channel in theme.bg.light)
-
-                    shadow_surface.fill((0, 0, 0, 0))
-                    shadow_surface.set_alpha(255 * (theme.shadow_opacity * 2))
-
-                    pygame.draw.rect(shadow_surface, "black", (
-                        0, 0, BOARD_WIDTH, BOARD_HEIGHT
-                    ))
-
-                    self.surface.blit(shadow_surface, (BOARD_START_X, BOARD_START_Y))
-
-
+                    self.darken_area(shadow_surface, (BOARD_START_X, BOARD_START_Y), (BOARD_WIDTH, BOARD_HEIGHT))
                     # I am going to try something ( Had 4 separate button initializations, very similar so it can be done in a for loop )
                     def create_promotion_callback(piece, final, Piece_class):
                         return lambda: [
                             self.board.set_promote_piece(piece, final, Piece_class),
                             self.remove_promote_buttons()
                         ]
+
                     # Without a callback python will always use the latest iteration which is Knight for the action
                     for idx, Piece_class in enumerate([Queen, Bishop, Rook, Knight]):
                         button = Button(
-                            image=piece.get_surf_with_size(Piece_class(piece.color).texture, PIECE_SIZE), width=SQSIZE, height=SQSIZE, bg_color=brightened_color,
-                                pos=(col * SQSIZE + BOARD_START_X,
-                                     (row + idx if piece.color == "white" else (-idx - 1)) * SQSIZE + BOARD_START_Y + (0 if piece.color == "white" else BOARD_HEIGHT)),
-                                action=create_promotion_callback(piece, final, Piece_class)
+                            image=piece.get_surf_with_size(Piece_class(piece.color).texture, PIECE_SIZE), width=SQSIZE,
+                            height=SQSIZE, bg_color=theme.bg.light, hover_color=brightened_color,
+                            pos=(col * SQSIZE + BOARD_START_X,
+                                 (row + idx if piece.color == "white" else (-idx - 1)) * SQSIZE + BOARD_START_Y + (
+                                     0 if piece.color == "white" else BOARD_HEIGHT)),
+                            action=create_promotion_callback(piece, final, Piece_class)
                         )
                         self.promotion_buttons.append(button)
 
-
                     for btn in self.promotion_buttons:
-                        btn.draw(self.surface)
-                        btn.handle_event()
+                        btn.draw_and_handle(self.surface)
 
 
     # Non-render methods
     def next_turn(self):
         self.next_player = "white" if self.next_player == "black" else "black"
 
+
     def set_hover(self, row, col):
         pass
         # self.hovered_square = self.board.squares[row][col]
 
+
     def change_theme(self):
         self.config.change_theme()
+
+
     def randomize_theme(self):
         self.config.randomize_theme()
 
+
     def reset(self):
         self.__init__(self.surface)
+
 
     def remove_promote_buttons(self):
         for button in self.promotion_buttons:

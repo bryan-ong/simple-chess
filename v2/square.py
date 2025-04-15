@@ -2,11 +2,12 @@ from const import *
 
 
 class Square:
-    def __init__(self, row, col, piece=None):
+    def __init__(self, row, col, board, piece=None):
         self.row = row
         self.col = col
         self.piece = piece
         self.alphacol = self.get_alpha_col(col) # Attributes a letter to column number
+        self.board = board # Don't want to refactor all my Square constructors, will default to None
 
     def __eq__(self, other):
         return self.row == other.row and self.col == other.col
@@ -26,6 +27,23 @@ class Square:
 
     def is_empty_or_enemy(self, color):
         return self.is_empty() or self.has_enemy_piece(color)
+
+    def is_under_attack(self, color):
+            enemy_color = "black" if color == "white" else "white"
+
+            for row in range(ROWS):
+                for col in range(COLS):
+                    # if self.has_enemy_piece(): Cannot use has_enemy_piece() here
+                    piece = self.board.squares[row][col].piece
+                    if piece and piece.color == enemy_color:
+                        piece.clear_moves() # It's best to clear before recalculating
+                        self.board.calc_moves(piece, row, col, False)
+
+                        # Now check if this square is in any legal moves of enemy color
+                        for move in piece.valid_moves:
+                            return move.final.row == self.row and move.final.col == self.col
+            return False
+
 
     @staticmethod # Helper method
     def in_range(*args):

@@ -29,6 +29,8 @@ class Config:
             os.path.join(SOUNDS_DIR, 'castle.mp3'))
         self.promote_sound = Sound(
             os.path.join(SOUNDS_DIR, 'promote.mp3'))
+        self.checkmate_sound = Sound(
+            os.path.join(SOUNDS_DIR, 'checkmate.mp3'))
 
 
     def change_theme(self):

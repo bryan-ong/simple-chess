@@ -1,16 +1,19 @@
 import copy
+import math
+import sys
 
+import v2.game
 from square import Square
-from game import *
 from piece import *
 from const import *
 from move import Move
 from soundmanager import SoundManager
 
+
 class Board:
     def __init__(self, player_count):
-        # Added 2 list comprehensions so that I can make dynamic sized boards in the future, not sure how useful it would be
-        self.squares = [[Square(row, col, self) for col in range(COLS)] for row in range(ROWS)]
+        self.checkmated = False
+        self.squares = [[Square(row, col, self, self) for col in range(COLS)] for row in range(ROWS)]
         self._create()
         self._add_pieces("white")
         self._add_pieces("black")
@@ -18,338 +21,321 @@ class Board:
         self.pending_promotion = False
         self.promote_option = None
         self.player_count = player_count
+        self._move_cache = {}  # Caching
+        self.was_last_move_capture = False
+        self.winner = None
 
-    def in_check(self, piece, move):
-        temp_piece = copy.deepcopy(piece)
-        temp_board = copy.deepcopy(self)
-        temp_board.move(temp_piece, move, testing=True)
-
+    def in_check(self, color):
+        # Checks if the king is in check for that color
+        king_pos = None
+        # Find the king's position
         for row in range(ROWS):
             for col in range(COLS):
-                if temp_board.squares[row][col].has_enemy_piece(piece.color):
-                    p = temp_board.squares[row][col].piece
-                    temp_board.calc_moves(p, row, col, bool=False)
-                    for m in p.valid_moves:
-                        if isinstance(m.final.piece, King):
-                            return True
+                piece = self.squares[row][col].piece
+                if isinstance(piece, King) and piece.color == color:
+                    king_pos = (row, col)
+                    break
+            if king_pos:
+                break
 
+        if not king_pos: # If no king, game is probably over
+            return False
+
+        # Check if any enemy piece can attack the king
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = self.squares[row][col].piece
+                if piece and piece.color != color:
+                    # Use cached moves if available
+                    cache_key = (piece.__class__.__name__, row, col, color)
+                    if cache_key not in self._move_cache:
+                        self.calc_moves(piece, row, col, check_check=False) # Calculate all the valid moves and sets valid_moves[] to the result
+                        self._move_cache[cache_key] = piece.valid_moves
+
+                    for move in self._move_cache[cache_key]:
+                        if move.final.row == king_pos[0] and move.final.col == king_pos[1]: # Check if king in list of valid moves
+                            return True
         return False
 
-    def calc_moves(self, piece, row, col, bool=True):
-        # Calculate all the possible (valid) moves of a specific piece in a specific pos
+    def calc_moves(self, piece, row, col, check_check=True):
+        # Calculate all valid moves for a piece at given position
+        piece.clear_moves()
 
-        def get_possible_moves(possible_moves):
-            for possible_move in possible_moves:
-                possible_move_row, possible_move_col = possible_move
+        # First get all pseudo-legal moves ( moves that each piece can take, not accounting for checks )
+        self.calc_pseudo_legal_moves(piece, row, col)
 
-                if Square.in_range(possible_move_row, possible_move_col):
-                    if self.squares[possible_move_row][possible_move_col].is_empty_or_enemy(piece.color):
-                        # Create squares for move
-                        initial = Square(row, col)
-                        final_piece = self.squares[possible_move_row][possible_move_col].piece
-                        final = Square(possible_move_row, possible_move_col, final_piece)
+        if not check_check: # If the king is not in check, just cancel as there is no need to filter out legal moves
+            return
 
-                        # Create new move
-                        move = Move(initial, final)
+        valid_moves = []
+        for move in piece.valid_moves:
+            if not self._move_leaves_king_in_check(piece, row, col, move): # Method name says it all
+                valid_moves.append(move)
 
-                        if bool:
-                            if not self.in_check(piece, move):
-                                piece.add_move(move)
-                        else:
-                            piece.add_move(move)
+        piece.valid_moves = valid_moves
 
-        def pawn_moves():
-            direction = piece.dir  # 1 for white (down), -1 for black (up)
-            valid_moves = []
+    def _move_leaves_king_in_check(self, piece, row, col, move):
+        # Save original state
+        original_piece = self.squares[move.final.row][move.final.col].piece
+        original_moved = piece.moved
 
-            max_steps = 2 if not piece.moved else 1
+        # Make the move temporarily
+        self.squares[row][col].piece = None
+        self.squares[move.final.row][move.final.col].piece = piece
+        piece.moved = True
 
-            for possible_move_row in range(1, max_steps + 1):
-                if Square.in_range(possible_move_row):
-                    final_row = row + (direction * possible_move_row)
-
-                    # Check if still on board
-                    if not 0 <= final_row < ROWS:
-                        break
-
-                    # Check if square is empty
-                    if self.squares[final_row][col].is_empty():
-                        initial, final = Square(row, col), Square(final_row, col)
-                        move = Move(initial, final)
-
-                        if bool:
-                            if not self.in_check(piece, move):
-                                valid_moves.append(move)
-                        else:
-                            valid_moves.append(move)
-                    else:
-                        break  # Blocked by piece
-                else:
+        # Find the king's position
+        king_pos = None
+        for r in range(ROWS):
+            for c in range(COLS):
+                sq_piece = self.squares[r][c].piece
+                if isinstance(sq_piece, King) and sq_piece.color == piece.color:
+                    king_pos = (r, c)
                     break
+            if king_pos:
+                break
 
-
-            # Diagonal captures
-            possible_move_rows = [row + direction]
-            possible_move_cols = [col - 1, col + 1]
-
-            for possible_move_row in possible_move_rows:
-                for possible_move_col in possible_move_cols:
-                    # Check if on board
-                    if Square.in_range(possible_move_row, possible_move_col):
-                        if self.squares[possible_move_row][possible_move_col].has_enemy_piece(piece.color):
-                            final_piece = self.squares[possible_move_row][possible_move_col].piece
-                            initial, final = Square(row, col), Square(possible_move_row, possible_move_col, final_piece)
-                            move = Move(initial, final)
-
-                            if bool:
-                                if not self.in_check(piece, move):
-                                    valid_moves.append(move)
-                            else:
-                                valid_moves.append(move)
-
-            # En passant moves
-            r = 3 if piece.color == "white" else ROWS - 4
-            final_r = 2 if piece.color == "white" else 5
-            if row == r:
-                # Left
-                if Square.in_range(col-1):
-                    if self.squares[row][col-1].has_enemy_piece(piece.color):
-                        left_pawn = self.squares[row][col-1].piece
-                        if isinstance(left_pawn, Pawn):
-                            if left_pawn.can_get_passant_by_other:
-                                # print("left can passant")
-                                initial, final = Square(row, col), Square(final_r, col-1, left_pawn)
-                                move = Move(initial, final)
-
-                                if bool:
-                                    if not self.in_check(piece, move):
-                                        valid_moves.append(move)
-                                else:
-                                    valid_moves.append(move)
-                # Right
-                if Square.in_range(col+1):
-                    if self.squares[row][col + 1].has_enemy_piece(piece.color):
-                        right_pawn = self.squares[row][col + 1].piece
-                        if isinstance(right_pawn, Pawn):
-                            # print("right ", right_pawn.en_passant)
-                            if right_pawn.can_get_passant_by_other:
-                                initial, final = Square(row, col), Square(final_r, col + 1, right_pawn)
-                                move = Move(initial, final)
-
-                                if bool:
-                                    if not self.in_check(piece, move):
-                                        valid_moves.append(move)
-                                else:
-                                    valid_moves.append(move)
-
-
-            # For some reason we need to create a new valid moves[] and then set the piece's valid moves to this, as appending directly to the piece doesn't seem to work
-            piece.valid_moves = valid_moves
-
-        def knight_moves():
-            possible_moves = [  # Coded in a way that y is determined before x
-                (row - 2, col + 1),
-                (row - 1, col + 2),
-                (row + 1, col + 2),
-                (row + 2, col + 1),
-                (row + 2, col - 1),
-                (row + 1, col - 2),
-                (row - 1, col - 2),
-                (row - 2, col - 1),
-            ]
-
-            get_possible_moves(possible_moves)
-
-        def straight_line_moves(increments):  # Increments
-            for increment in increments:
-                row_inc, col_inc = increment
-                possible_move_row = row + row_inc
-                possible_move_col = col + col_inc
-
-                while True:
-                    if Square.in_range(possible_move_row, possible_move_col):
-                        initial = Square(row, col)
-                        final_piece = self.squares[possible_move_row][possible_move_col].piece
-                        final = Square(possible_move_row, possible_move_col, final_piece)
-                        move = Move(initial, final)
-
-                        target_square = self.squares[possible_move_row][possible_move_col]
-                        if target_square.is_empty():
-                            if bool:
-                                if not self.in_check(piece, move):
-                                    piece.add_move(move)
-                            else:
-                                piece.add_move(move)
-
-
-                        # Continue checking (not really needed but should add for resiliency anyways)
-                        elif target_square.has_enemy_piece(piece.color):
-                            if bool:
-                                if not self.in_check(piece, move):
-                                    piece.add_move(move)
-                                else:
-                                    break  # Add only the protecting move, so break the for loop and don't add any more
-                            else:
-                                piece.add_move(move)
-                            break  # Stop checking
-
-                        elif target_square.has_ally_piece(piece.color):
+        in_check = False
+        if king_pos:
+            # Check if any enemy piece can attack the king
+            for r in range(ROWS):
+                for c in range(COLS):
+                    enemy_piece = self.squares[r][c].piece
+                    if enemy_piece and enemy_piece.color != piece.color:
+                        enemy_piece.clear_moves()
+                        self.calc_pseudo_legal_moves(enemy_piece, r, c)
+                        for enemy_move in enemy_piece.valid_moves:
+                            if (enemy_move.final.row == king_pos[0] and
+                                    enemy_move.final.col == king_pos[1]):
+                                in_check = True
+                                break
+                        if in_check:
                             break
 
-                    else:
-                        break  # Not on board
+        # Reverts to the original move
+        self.squares[row][col].piece = piece
+        self.squares[move.final.row][move.final.col].piece = original_piece
+        piece.moved = original_moved
 
-                    possible_move_row += row_inc
-                    possible_move_col += col_inc
+        return in_check
 
-        def king_moves():
-            possible_moves = [  # Coded in a way that y is determined before x
-                # Go through clockwise all adjacent
-                (row - 1, col),
-                (row - 1, col + 1),
-                (row, col + 1),
-                (row + 1, col + 1),
-                (row + 1, col),
-                (row + 1, col - 1),
-                (row, col - 1),
-                (row - 1, col - 1),
-            ]
-
-            for possible_move in possible_moves:
-                possible_row, possible_col = possible_move
-
-                if Square.in_range(possible_row, possible_col):
-                    if self.squares[possible_row][possible_col].is_empty_or_enemy(piece.color):
-                        initial = Square(row, col)
-                        final_piece = self.squares[possible_row][possible_col].piece
-                        final = Square(possible_row, possible_col, final_piece)
-                        move = Move(initial, final)
-
-                        if bool:
-                            # Create temporary board to test if move gets king out of check
-                            temp_board = copy.deepcopy(self)
-                            temp_piece = copy.deepcopy(piece)
-                            temp_board.move(temp_piece, move, testing=True)
-
-                            # Check if king would still be in check after this move
-                            king_pos = None
-                            for r in range(ROWS):
-                                for c in range(COLS):
-                                    if isinstance(temp_board.squares[r][c].piece, King) and temp_board.squares[r][
-                                        c].piece.color == piece.color:
-                                        king_pos = (r, c)
-                                        break
-
-                            if king_pos:
-                                in_check = False
-                                for r in range(ROWS):
-                                    for c in range(COLS):
-                                        enemy_piece = temp_board.squares[r][c].piece
-                                        if enemy_piece and enemy_piece.color != piece.color:
-                                            temp_board.calc_moves(enemy_piece, r, c, bool=False)
-                                            for m in enemy_piece.valid_moves:
-                                                if m.final.row == king_pos[0] and m.final.col == king_pos[1]:
-                                                    in_check = True
-                                                    break
-                                            if in_check:
-                                                break
-                                if not in_check:
-                                    piece.add_move(move)
-                        else:
-                            piece.add_move(move)
-                            
-            # Will implement castling
-            # You cannot castle if the king has already moved, or if the rook in question has moved. Nor can you castle while in check.
-            # However, you can castle with a rook that is under attack at the time, and the rook can pass through an attacked square when castling while the king cannot.
-            if not piece.moved:
-                # Long castling
-                left_rook = self.squares[row][0].piece
-                if isinstance(left_rook, Rook):
-                    if not left_rook.moved:
-                        for c in range(1, 4): # Iterate through the between cols
-                            if self.squares[row][c].has_piece():
-                                break
-                            if c == 3:
-                                # Assigns left rook reference
-                                piece.left_rook = left_rook
-                                initial = Square(row, 0)
-                                final = Square(row, 3)
-                                rook_move = Move(initial, final)
-
-                                # Left king
-                                initial = Square(row, col)
-                                final = Square(row, 2)
-                                king_move = Move(initial, final)
-
-                                if bool:
-                                    if not self.in_check(piece, king_move) and not self.in_check(left_rook, rook_move):
-                                        left_rook.add_move(rook_move)
-                                        piece.add_move(king_move)
-                                else:
-                                    left_rook.add_move(rook_move)
-                                    piece.add_move(king_move)
-
-                right_rook = self.squares[row][ROWS - 1].piece
-                if isinstance(right_rook, Rook):
-                    if not right_rook.moved:
-                        for c in range(5, 7): # Iterate through the between cols
-                            if self.squares[row][c].has_piece():
-                                break
-                            if c == 6:
-                                # Assigns right rook reference
-                                piece.right_rook = right_rook
-                                initial = Square(row, 7)
-                                final = Square(row, 5)
-                                rook_move = Move(initial, final)
-
-                                initial = Square(row, col)
-                                final = Square(row, 6)
-                                king_move = Move(initial, final)
-
-                                if bool:
-                                    if not self.in_check(piece, king_move) and not self.in_check(right_rook, rook_move):
-                                        right_rook.add_move(rook_move)
-                                        piece.add_move(king_move)
-                                else:
-                                    right_rook.add_move(rook_move)
-                                    piece.add_move(king_move)
-
-
+    def calc_pseudo_legal_moves(self, piece, row, col):
+        # Calculate all moves for selected piece, pseudo legal as we have yet to account for checks / pins
         if isinstance(piece, Pawn):
-            pawn_moves()
+            self._calc_pawn_moves(piece, row, col)
         elif isinstance(piece, Knight):
-            knight_moves()
+            self._calc_knight_moves(piece, row, col)
         elif isinstance(piece, Bishop):
-            straight_line_moves([
-                (-1, 1),  # Top Right
-                (-1, -1),  # Top Left
-                (1, 1),  # Bottom Right
-                (1, -1)  # Bottom Left
-            ])
+            self._calc_bishop_moves(piece, row, col)
         elif isinstance(piece, Rook):
-            straight_line_moves([
-                (-1, 0),  # Up
-                (0, 1),  # Right
-                (1, 0),  # Bottom
-                (0, -1)  # Left
-            ])
+            self._calc_rook_moves(piece, row, col)
         elif isinstance(piece, Queen):
-            straight_line_moves([
-                (-1, 1),  # Top Right
-                (-1, -1),  # Top Left
-                (1, 1),  # Bottom Right
-                (1, -1),  # Bottom Left
-                (-1, 0),  # Up
-                (0, 1),  # Right
-                (1, 0),  # Bottom
-                (0, -1)  # Left
-            ])
+            self._calc_queen_moves(piece, row, col)
         elif isinstance(piece, King):
-            king_moves()
+            self._calc_king_moves(piece, row, col)
+
+    def _calc_pawn_moves(self, piece, row, col):
+        # Gets all pawn moves
+        # Safer to create temporary moves[] and set the instance variable to the temporary moves[] as I was encountering some bugs like being able to capture the pawn in front not diagonal
+        moves = []
+        direction = piece.dir
+        start_row = 1 if piece.color == "black" else ROWS - 2
+        # Forward moves
+        if Square.in_range(row + direction) and self.squares[row + direction][col].is_empty(): # If square in front of pawn is empty, append the move
+            moves.append(Move(Square(row, col, self), Square(row + direction, self, col)))
+            if row == start_row and Square.in_range(row + 2 * direction) and self.squares[row + 2 * direction][col].is_empty():
+                # Same as above but for 2 squares ahead, for loop could be used but since only 2 statements needed it is fine
+                moves.append(Move(Square(row, col, self), Square(row + 2, self * direction, col)))
+
+        # Captures
+        for dc in [-1, 1]:
+            if Square.in_range(row + direction, col + dc):
+                target = self.squares[row + direction][col + dc]
+                if target.has_enemy_piece(piece.color):
+                    moves.append(Move(Square(row, col, self), Square(row + direction, self, col + dc, target.piece)))
+
+        # En passant
+        if self.last_move and isinstance(self.last_move.final.piece, Pawn):
+            last_pawn = self.last_move.final.piece
+            if abs(self.last_move.initial.row - self.last_move.final.row) == 2: # Check if the last move was a pawn and if it has moved 2 squares
+                if row == self.last_move.final.row and abs(col - self.last_move.final.col) == 1:
+                    moves.append(Move(Square(row, col, self), Square(row + direction, self, self.last_move.final.col, last_pawn)))
+
+        piece.valid_moves = moves
+
+    def _calc_knight_moves(self, piece, row, col):
+
+        moves = []
+        possible_moves = [
+            (row - 2, col + 1), (row - 1, col + 2), (row + 1, col + 2), (row + 2, col + 1),
+            (row + 2, col - 1), (row + 1, col - 2), (row - 1, col - 2), (row - 2, col - 1)
+        ]
+        # r c stand for row and col since they are already used as params
+        for r, c in possible_moves:
+            if Square.in_range(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
+                moves.append(Move(Square(row, col, self), Square(r, c, self, self.squares[r][c].piece)))
+
+        piece.valid_moves = moves
+
+    def _calc_sliding_moves(self, piece, row, col, directions):
+        # General method for sliding/straightline pieces
+        moves = []
+        for dr, dc in directions:
+            r, c = row + dr, col + dc
+            while Square.in_range(r, c):
+                target = self.squares[r][c]
+                if target.is_empty():
+                    moves.append(Move(Square(row, col, self), Square(r, c, self)))
+                elif target.has_enemy_piece(piece.color):
+                    moves.append(Move(Square(row, col, self), Square(r, c, self, target.piece)))
+                    break
+                else:
+                    break
+                r += dr
+                c += dc
+        return moves
+
+    def _calc_bishop_moves(self, piece, row, col):
+        piece.valid_moves = self._calc_sliding_moves(piece, row, col, [(-1, -1), (-1, 1), (1, -1), (1, 1)])
+
+    def _calc_rook_moves(self, piece, row, col):
+        piece.valid_moves = self._calc_sliding_moves(piece, row, col, [(-1, 0), (1, 0), (0, -1), (0, 1)])
+
+    def _calc_queen_moves(self, piece, row, col):
+        piece.valid_moves = self._calc_sliding_moves(piece, row, col,
+                                                     [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0),
+                                                      (1, 1)])
+
+    def _calc_king_moves(self, piece, row, col):
+        moves = []
+        # Normal moves, the adjacent ones
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                r, c = row + dr, col + dc
+                if Square.in_range(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
+                    moves.append(Move(Square(row, col, self), Square(r, c, self, self.squares[r][c].piece)))
+
+        # Castling
+        if not piece.moved:
+            # King side
+            # Checks if the 6th and 7th column is empty ( will add a method to combine both empty and attacked checks )
+            if (self.is_empty_and_not_under_attack(row, COLS - 3, piece.color)) and self.is_empty_and_not_under_attack(row, COLS - 2, piece.color):
+                if isinstance(self.squares[row][COLS - 1].piece, Rook) and not self.squares[row][COLS - 1].piece.moved: # Check if the rook on the last column has moved
+                    moves.append(Move(Square(row, col, self), Square(row, COLS - 2, self)))
+                    # This is not working. I'll try just making separate methods for these
+
+            # Queen side
+            if (self.is_empty_and_not_under_attack(row, 1, piece.color)) and self.is_empty_and_not_under_attack(row, 2, piece.color):
+                if isinstance(self.squares[row][0].piece, Rook) and not self.squares[row][0].piece.moved:  # Check if the rook on the first column has moved
+
+                    moves.append(Move(Square(row, col, self), Square(row, COLS - 2, self)))
+
+        piece.valid_moves = moves
+
+    def _can_castle_kingside(self, king_piece, row, col):
+        if king_piece.moved:
+            return
+
+        if self.in_check(king_piece.color):
+            return
+
+        for column in range(col + 1, col + 2): # Easy to forget it's exclusive
+            if self.squares[row][column].has_piece():
+                return False # We are blocked
+
+        for column in range(col + 1, col + 2):
+            if self.squares[row][column].is_under_attack(king_piece.color):
+                return False # Can definitely refactor but I am trying to get it to work first
+
+        # Now to check the rook
+
+
+
+    def is_empty_and_not_under_attack(self, row, col, color):
+        return self.squares[row][col].is_empty() and not self.squares[row][col].is_under_attack(color)
+
+    def is_checkmate(self, color):
+        # This checks if a color is checked for the current game state
+        if not self.in_check(color):
+            return False
+
+        # Check if any piece has any valid move
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = self.squares[row][col].piece
+                if piece and piece.color == color:
+                    self.calc_moves(piece, row, col)
+                    if piece.valid_moves:
+                        return False
+        return True
+
+    def move(self, piece, move, testing=False):
+        if not testing and not self.valid_move(piece, move):
+            return False
+
+        initial = move.initial
+        final = move.final
+
+        # Clear cache
+        self._move_cache = {}
+
+        # Execute the move
+        self.squares[initial.row][initial.col].piece = None
+        self.squares[final.row][final.col].piece = piece
+        piece.moved = True
+
+        # Handle special moves
+        if isinstance(piece, Pawn):
+            # En passant capture
+            if initial.col != final.col and self.squares[final.row][final.col].is_empty():
+                self.squares[initial.row][final.col].piece = None
+                if not testing:
+                    SoundManager().play("capture")
+
+            # Check promotion
+            if final.row == 0 or final.row == ROWS - 1:
+                self.pending_promotion = True
+
+        elif isinstance(piece, King):
+            # Castling
+            if abs(initial.col - final.col) == 2 and not testing:
+                # Kingside
+                (row, col) = initial.row, initial.col
+                if final.col > initial.col: # Means move to the right
+                    rook = self.squares[initial.row][col + 3].piece
+                    self.squares[row][col + 3].piece = None
+                    self.squares[row][col + 2].piece = piece
+                    self.squares[row][col + 1].piece = rook
+                # Queenside
+                else:
+                    rook = self.squares[row][col - 4].piece
+                    self.squares[row][col - 4].piece = None
+                    self.squares[row][col - 3].piece = piece
+                    self.squares[row][col - 2].piece = rook
+                SoundManager().play("castle")
+
+        self.last_move = move
+
+        # Check for check/checkmate
+        if not testing:
+            opponent_color = "black" if piece.color == "white" else "white"
+            if self.is_checkmate(opponent_color):
+                SoundManager().play("checkmate")
+                self.checkmated = True
+                self.winner = piece.color
+            elif self.in_check(opponent_color):
+                SoundManager().play("check")
+            elif self.was_last_move_capture:
+                SoundManager().play("capture")
+            else:
+                SoundManager().play("move")
+
+        return True
 
     def valid_move(self, piece, move):
         return move in piece.valid_moves
-
 
     def check_promote(self, piece, final):
         if isinstance(piece, Pawn):
@@ -362,73 +348,22 @@ class Board:
         piece.should_promote = False
         self.pending_promotion = False
 
-    def move(self, piece, move, testing=False):
-        initial = move.initial
-        final = move.final
-
-        en_passant_empty = self.squares[final.row][final.col].is_empty()
-
-        # Update the console board and reflect changes on GUI
-        self.squares[initial.row][initial.col].piece = None
-        self.squares[final.row][final.col].piece = piece
-
-        # Pawn promotion handled in #Game
-        piece.moved = True  # For pawns and castling
-
-        # Pawn captures using en passant
-
-        if isinstance(piece, Pawn):
-            diff = final.col - initial.col
-            if diff != 0 and en_passant_empty:
-                self.squares[initial.row][initial.col + diff].piece = None
-                if not testing:
-                    SoundManager().play("capture")
 
 
-        # Castling
-        elif isinstance(piece, King):
-            if self.castling(initial, final) and not testing:
-                diff = final.col - initial.col
-                rook = piece.left_rook if (diff < 0) else piece.right_rook
-                self.move(rook, rook.valid_moves[-1])
-                SoundManager().play("castle")
-
-
-
-        # Clear valid moves for update
-        piece.clear_moves()
-
-        # Set last move
-        self.last_move = move
-
-    def castling(self, initial, final):
-        return abs(initial.col - final.col) == 2 # If king moves 2 squares == king castled
-    def en_passant(self, initial, final):
-        return abs(initial.row - final.row) == 2 # If the pawn moved 2 squares == first move
-
-    def set_true_en_passant(self, piece):
-        if isinstance(piece, Pawn):
-            for row in range(ROWS):
-                for col in range(COLS):
-                    if isinstance(self.squares[row][col].piece, Pawn):
-                        self.squares[row][col].piece.en_passant = False # Sets all en passant state to false
-                    if self.en_passant(self.last_move.initial, self.last_move.final):
-                        # Checks if the last pawn was moved 2
-                        piece.en_passant = True # Then sets the previously moved en passant to True
-
-    def _create(self):  # Underscore to imply private method
+    def _create(self):
         for row in range(ROWS):
             for col in range(COLS):
-                self.squares[row][col] = Square(row, col)
+                self.squares[row][col] = Square(row, col, self)
 
     def _add_pieces(self, color):
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
-        # ALL pawns
+        # Pawns
         # for col in range(COLS):
-        #     self.squares[row_pawn][col] = Square(row_pawn, col, Pawn(color, self))
-            # self.squares[4][col] = Square(row_pawn, col, Pawn(color))
+        #     self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
 
-        pieces = (Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
-        for i, piece in enumerate(pieces):
-            self.squares[row_other][i] = Square(row_other, i, piece(color, self))
+        pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+        for col in range(COLS):
+            # Get the piece class using modulo to cycle through the list, in case there are more than 8x8
+            piece_class = pieces[col % len(pieces)]
+            self.squares[row_other][col] = Square(row_other, col, self, piece_class(color))

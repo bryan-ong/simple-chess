@@ -20,6 +20,7 @@ class SoundManager:
             "castle": config.castle_sound,
             "promote": config.promote_sound,
             "move": config.move_sound,
+            "checkmate": config.checkmate_sound,
         }
 
 
