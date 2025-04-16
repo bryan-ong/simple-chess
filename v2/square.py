@@ -40,12 +40,15 @@ class Square:
                 piece = self.board.squares[row][col].piece
                 if piece and piece.color == enemy_color:
                     piece.clear_moves() # It's best to clear before recalculating
-                    valid_moves = self.board.calc_moves(piece, row, col, False, output=True)
-                    if valid_moves:
+                    self.board.calc_moves(piece, row, col, False)
                     # Now check if this square is in any legal moves of enemy color
-                        for move in valid_moves:
-                            return move.final.row == self.row and move.final.col == self.col
-                else: return False
+                    for move in piece.valid_moves:
+                        if move.final.row == self.row and move.final.col == self.col:
+                            return True
+        return False
+
+    def is_empty_and_not_under_attack(self, color):
+        return self.is_empty() and not self.is_under_attack(color)
 
     @staticmethod # Helper method
     def in_range(*args):
@@ -56,7 +59,14 @@ class Square:
 
     @staticmethod
     def get_alpha_col(col):
-        return "" if col < 0 else Square.get_alpha_col(col // 26 - 1) + chr(col % 26 + ord("A"))
-    # From https://www.reddit.com/r/learnprogramming/comments/p7ae0d/comment/h9j05s5/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+        if col < 0:
+            return ""
+        quotient, remainder = divmod(col, 26)
+        return Square.get_alpha_col(quotient - 1) + chr(remainder + ord('A'))
+        # Quotient - 1 as we start from 0 in programming
+        # If quotient = 0 then we return nothing, so if I were to put 3 in, it would return "D" instead of "AD"
+        # The chr part returns the ordinal which is 97 + the remainder of the alphabet in order to get the actual alphabet, of course you could just do + 97 instead of ord
+        # From https://www.reddit.com/r/learnprogramming/comments/p7ae0d/comment/h9j05s5/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+
 
     # Converts numbers to letters excel style (1 = A, 27 = AA)

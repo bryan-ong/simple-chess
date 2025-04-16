@@ -43,7 +43,7 @@ class Main:
             game.show_checkmate(shadow_surface)
 
             self.clock.tick()
-            # print(self.clock.get_fps())
+            print(self.clock.get_fps())
 
             for event in pygame.event.get():
                 hover_coords, is_hover_valid = dragger.grid_coords(

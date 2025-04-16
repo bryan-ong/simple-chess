@@ -57,7 +57,7 @@ class Board:
                             return True
         return False
 
-    def calc_moves(self, piece, row, col, check_check=True, output=False):
+    def calc_moves(self, piece, row, col, check_check=True):
         # Calculate all valid moves for a piece at given position
         piece.clear_moves()
 
@@ -72,9 +72,6 @@ class Board:
             if not self._move_leaves_king_in_check(piece, row, col, move): # Method name says it all
                 valid_moves.append(move)
 
-        if output:
-            print(valid_moves)
-            return valid_moves
         piece.valid_moves = valid_moves
 
 
@@ -146,7 +143,7 @@ class Board:
         start_row = 1 if piece.color == "black" else ROWS - 2
         # Forward moves
         if Square.in_range(row + direction) and self.squares[row + direction][col].is_empty(): # If square in front of pawn is empty, append the move
-            moves.append(Move(Square(row, col, self), Square(row + direction, self, col)))
+            moves.append(Move(Square(row, col, self), Square(row + direction, col, self)))
             if row == start_row and Square.in_range(row + 2 * direction) and self.squares[row + 2 * direction][col].is_empty():
                 # Same as above but for 2 squares ahead, for loop could be used but since only 2 statements needed it is fine
                 moves.append(Move(Square(row, col, self), Square(row + 2 * direction, col, self)))
@@ -156,14 +153,14 @@ class Board:
             if Square.in_range(row + direction, col + dc):
                 target = self.squares[row + direction][col + dc]
                 if target.has_enemy_piece(piece.color):
-                    moves.append(Move(Square(row, col, self), Square(row + direction, self, col + dc, target.piece)))
+                    moves.append(Move(Square(row, col, self), Square(row + direction, col + dc, self, target.piece)))
 
         # En passant
         if self.last_move and isinstance(self.last_move.final.piece, Pawn):
             last_pawn = self.last_move.final.piece
             if abs(self.last_move.initial.row - self.last_move.final.row) == 2: # Check if the last move was a pawn and if it has moved 2 squares
                 if row == self.last_move.final.row and abs(col - self.last_move.final.col) == 1:
-                    moves.append(Move(Square(row, col, self), Square(row + direction, self, self.last_move.final.col, last_pawn)))
+                    moves.append(Move(Square(row, col, self), Square(row + direction, self.last_move.final.col, self, last_pawn)))
 
         piece.valid_moves = moves
 
@@ -222,51 +219,41 @@ class Board:
                     moves.append(Move(Square(row, col, self), Square(r, c, self, self.squares[r][c].piece)))
 
         # Castling
-        if not piece.moved and piece.color == "white":
-            king_side = Move(Square(row, col, self), Square(row, COLS - 2, self))
+        if not piece.moved:
+            king_side = Move(Square(row, col, self), Square(row, col + 2, self))
+            queen_side = Move(Square(row, col, self), Square(row, col - 2, self))
             # King side
             # Checks if the 6th and 7th column is empty ( will add a method to combine both empty and attacked checks )
-            if self.squares[row][COLS - 3].is_empty() and self.squares[row][COLS - 2].is_empty():
-                if self.squares[row][COLS - 3].is_safe(piece.color) and self.squares[row][COLS - 2].is_safe(piece.color):
-                    if isinstance(self.squares[row][COLS - 1].piece, Rook) and not self.squares[row][COLS - 1].piece.moved: # Check if the rook on the last column has moved
-                        print("can castle")
-                        moves.append(king_side)
-                        return False
+
+            if self.can_castle(piece, row, col, kingside=True):
+                moves.append(king_side)
                     # This is not working. I'll try just making separate methods for these
-                else: print("cant castle")
-            else:
-                print("cant castle")
+
+            elif self.can_castle(piece, row, col, kingside=False):
+                moves.append(queen_side)
 
 
 
-            # Queen side
-            if self.is_empty_and_not_under_attack(row, 1, piece.color) and self.is_empty_and_not_under_attack(row, 2, piece.color):
-                if isinstance(self.squares[row][0].piece, Rook) and not self.squares[row][0].piece.moved:  # Check if the rook on the first column has moved
-                    pass
-                    # moves.append(Move(Square(row, col, self), Square(row, COLS - 2, self)))
+
+
         piece.valid_moves = moves
 
-    def _can_castle_kingside(self, king_piece, row, col):
-        if king_piece.moved:
-            return
+    def can_castle(self, piece, row, col, kingside=True):
 
-        if self.in_check(king_piece.color):
-            return
+        if kingside:
+            if (self.squares[row][col + 1].is_empty_and_not_under_attack(piece.color)
+            and self.squares[row][col + 2].is_empty_and_not_under_attack(piece.color)):
+                if isinstance(self.squares[row][col + 3].piece, Rook) and not self.squares[row][col + 3].piece.moved:  # Check if the rook on the last column has moved
+                    return True
+            return False
+        else: # I would use a for loop but right now trying to debug
+            if (self.squares[row][1].is_empty_and_not_under_attack(piece.color)
+            and self.squares[row][2].is_empty_and_not_under_attack(piece.color)
+            and self.squares[row][3].is_empty_and_not_under_attack(piece.color)):
 
-        for column in range(col + 1, col + 2): # Easy to forget it's exclusive
-            if self.squares[row][column].has_piece():
-                return False # We are blocked
-
-        for column in range(col + 1, col + 2):
-            if self.squares[row][column].is_under_attack(king_piece.color):
-                return False # Can definitely refactor but I am trying to get it to work first
-
-        # Now to check the rook
-
-
-
-    def is_empty_and_not_under_attack(self, row, col, color):
-        return self.squares[row][col].is_empty() and not self.squares[row][col].is_under_attack(color)
+                if isinstance(self.squares[row][0].piece, Rook) and not self.squares[row][0].piece.moved:  # Check if the rook on the last column has moved
+                    return True
+            return False
 
     def is_checkmate(self, color):
         # This checks if a color is checked for the current game state
@@ -324,8 +311,8 @@ class Board:
                 else:
                     rook = self.squares[row][col - 4].piece
                     self.squares[row][col - 4].piece = None
-                    self.squares[row][col - 3].piece = piece
-                    self.squares[row][col - 2].piece = rook
+                    self.squares[row][col - 2].piece = piece
+                    self.squares[row][col - 1].piece = rook
                 SoundManager().play("castle")
 
         self.last_move = move
@@ -371,8 +358,8 @@ class Board:
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
         # Pawns
-        # for col in range(COLS):
-        #     self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
+        for col in range(COLS):
+            self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
 
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for col in range(COLS):
