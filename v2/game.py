@@ -48,39 +48,44 @@ class Game:
             BOARD_WIDTH / 2)
         # Render methods
 
+        self.darkened_color = tuple(i * (0.95 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
+
+        self.exit_button = Button(
+            image=exit_image,
+            width=40,
+            height=40,
+            pos=(SCR_WIDTH - 40, 0),
+            hover_color=RED,
+            action=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT))
+        )
+        self.minimize_button = Button(
+            image=minimize_image,
+            width=40,
+            height=40,
+            pos=(SCR_WIDTH - 80, 0),
+            hover_color=RED,
+            action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
+        )
+
         self.bg_rect = pygame.Rect(0, 0, self.surface.get_width(), self.surface.get_height())
         self.top_bar = pygame.Rect(0, 0, SCR_WIDTH, 40)
+
+
+
 
     def show_gui(self):
         theme = self.config.theme
 
         pygame.draw.rect(self.surface, theme.bg.dark, self.bg_rect)
 
+        self.darkened_color = tuple(i * (0.95 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
 
-        darkened_color = tuple(i * (0.95 - theme.shadow_opacity) for i in theme.bg.dark)
-        pygame.draw.rect(self.surface, darkened_color, self.top_bar)
+        pygame.draw.rect(self.surface, self.darkened_color, self.top_bar)
 
-        exit_button = Button(
-            image=exit_image,
-            width=40,
-            height=40,
-            pos=(SCR_WIDTH - 40, 0),
-            bg_color=darkened_color,
-            hover_color=RED,
-            action=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT))
-        )
-        minimize_button = Button(
-            image=minimize_image,
-            width=40,
-            height=40,
-            pos=(SCR_WIDTH - 80, 0),
-            bg_color=darkened_color,
-            hover_color=RED,
-            action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
-        )
 
-        exit_button.draw_and_handle(self.surface)
-        minimize_button.draw_and_handle(self.surface)
+
+        self.exit_button.draw_and_handle(self.surface)
+        self.minimize_button.draw_and_handle(self.surface)
 
         title_surf = pygame.font.SysFont('monospace', 38, bold=True).render("Chess", True, theme.bg.light)
 
@@ -126,7 +131,6 @@ class Game:
                 # Color from theme
                 color = theme.bg.light if (row + col) % 2 == 0 else theme.bg.dark
 
-                rect = pygame.Rect(col * SQSIZE + BOARD_START_X, row * SQSIZE + BOARD_START_Y, SQSIZE, SQSIZE)
 
                 if theme.rounded:
                     kwargs = {}
@@ -140,10 +144,10 @@ class Game:
                         kwargs['border_bottom_right_radius'] = BORDER_RADIUS
 
                     if kwargs:
-                        pygame.draw.rect(self.surface, color, rect, **kwargs)
+                        pygame.draw.rect(self.surface, color, (col * SQSIZE + BOARD_START_X, row * SQSIZE + BOARD_START_Y, SQSIZE, SQSIZE), **kwargs)
                         continue
 
-                pygame.draw.rect(self.surface, color, rect)
+                pygame.draw.rect(self.surface, color, (col * SQSIZE + BOARD_START_X, row * SQSIZE + BOARD_START_Y, SQSIZE, SQSIZE))
 
 
     def show_coords(self):
@@ -319,7 +323,6 @@ class Game:
 
     def change_theme(self):
         self.config.change_theme()
-
 
     def randomize_theme(self):
         self.config.randomize_theme()

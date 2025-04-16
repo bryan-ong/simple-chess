@@ -13,7 +13,7 @@ class Main:
     def __init__(self):
         pygame.mixer.pre_init(44100, 16, 1, 4096)
         pygame.init()
-        self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN | DOUBLEBUF)
+        self.screen = pygame.display.set_mode((0,0), pygame.WINDOWMINIMIZED | DOUBLEBUF)
         pygame.display.set_caption("Chess")
         Game.SCR_WIDTH = self.screen.get_width()
         Game.SCR_HEIGHT = self.screen.get_height()
@@ -30,7 +30,7 @@ class Main:
         shadow_surface = self.shadow_surface
 
         while 1:
-            # game.show_gui()
+            game.show_gui()
             game.show_turn_indicator()
             game.show_board_misc()
             game.show_bg()
@@ -43,7 +43,7 @@ class Main:
             game.show_checkmate(shadow_surface)
 
             self.clock.tick()
-            print(self.clock.get_fps())
+            # print(self.clock.get_fps())
 
             for event in pygame.event.get():
                 hover_coords, is_hover_valid = dragger.grid_coords(
@@ -103,6 +103,7 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
+            # game.randomize_theme()
 
             pygame.display.update()
 

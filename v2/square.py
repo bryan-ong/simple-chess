@@ -28,22 +28,24 @@ class Square:
     def is_empty_or_enemy(self, color):
         return self.is_empty() or self.has_enemy_piece(color)
 
+    def is_safe(self, color):
+        return not self.is_under_attack(color)
+
     def is_under_attack(self, color):
-            enemy_color = "black" if color == "white" else "white"
+        enemy_color = "black" if color == "white" else "white"
 
-            for row in range(ROWS):
-                for col in range(COLS):
-                    # if self.has_enemy_piece(): Cannot use has_enemy_piece() here
-                    piece = self.board.squares[row][col].piece
-                    if piece and piece.color == enemy_color:
-                        piece.clear_moves() # It's best to clear before recalculating
-                        self.board.calc_moves(piece, row, col, False)
-
-                        # Now check if this square is in any legal moves of enemy color
-                        for move in piece.valid_moves:
+        for row in range(ROWS):
+            for col in range(COLS):
+                # if self.has_enemy_piece(): Cannot use has_enemy_piece() here
+                piece = self.board.squares[row][col].piece
+                if piece and piece.color == enemy_color:
+                    piece.clear_moves() # It's best to clear before recalculating
+                    valid_moves = self.board.calc_moves(piece, row, col, False, output=True)
+                    if valid_moves:
+                    # Now check if this square is in any legal moves of enemy color
+                        for move in valid_moves:
                             return move.final.row == self.row and move.final.col == self.col
-            return False
-
+                else: return False
 
     @staticmethod # Helper method
     def in_range(*args):

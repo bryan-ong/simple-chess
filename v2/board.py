@@ -57,7 +57,7 @@ class Board:
                             return True
         return False
 
-    def calc_moves(self, piece, row, col, check_check=True):
+    def calc_moves(self, piece, row, col, check_check=True, output=False):
         # Calculate all valid moves for a piece at given position
         piece.clear_moves()
 
@@ -72,7 +72,11 @@ class Board:
             if not self._move_leaves_king_in_check(piece, row, col, move): # Method name says it all
                 valid_moves.append(move)
 
+        if output:
+            print(valid_moves)
+            return valid_moves
         piece.valid_moves = valid_moves
+
 
     def _move_leaves_king_in_check(self, piece, row, col, move):
         # Save original state
@@ -145,7 +149,7 @@ class Board:
             moves.append(Move(Square(row, col, self), Square(row + direction, self, col)))
             if row == start_row and Square.in_range(row + 2 * direction) and self.squares[row + 2 * direction][col].is_empty():
                 # Same as above but for 2 squares ahead, for loop could be used but since only 2 statements needed it is fine
-                moves.append(Move(Square(row, col, self), Square(row + 2, self * direction, col)))
+                moves.append(Move(Square(row, col, self), Square(row + 2 * direction, col, self)))
 
         # Captures
         for dc in [-1, 1]:
@@ -218,20 +222,28 @@ class Board:
                     moves.append(Move(Square(row, col, self), Square(r, c, self, self.squares[r][c].piece)))
 
         # Castling
-        if not piece.moved:
+        if not piece.moved and piece.color == "white":
+            king_side = Move(Square(row, col, self), Square(row, COLS - 2, self))
             # King side
             # Checks if the 6th and 7th column is empty ( will add a method to combine both empty and attacked checks )
-            if (self.is_empty_and_not_under_attack(row, COLS - 3, piece.color)) and self.is_empty_and_not_under_attack(row, COLS - 2, piece.color):
-                if isinstance(self.squares[row][COLS - 1].piece, Rook) and not self.squares[row][COLS - 1].piece.moved: # Check if the rook on the last column has moved
-                    moves.append(Move(Square(row, col, self), Square(row, COLS - 2, self)))
+            if self.squares[row][COLS - 3].is_empty() and self.squares[row][COLS - 2].is_empty():
+                if self.squares[row][COLS - 3].is_safe(piece.color) and self.squares[row][COLS - 2].is_safe(piece.color):
+                    if isinstance(self.squares[row][COLS - 1].piece, Rook) and not self.squares[row][COLS - 1].piece.moved: # Check if the rook on the last column has moved
+                        print("can castle")
+                        moves.append(king_side)
+                        return False
                     # This is not working. I'll try just making separate methods for these
+                else: print("cant castle")
+            else:
+                print("cant castle")
+
+
 
             # Queen side
-            if (self.is_empty_and_not_under_attack(row, 1, piece.color)) and self.is_empty_and_not_under_attack(row, 2, piece.color):
+            if self.is_empty_and_not_under_attack(row, 1, piece.color) and self.is_empty_and_not_under_attack(row, 2, piece.color):
                 if isinstance(self.squares[row][0].piece, Rook) and not self.squares[row][0].piece.moved:  # Check if the rook on the first column has moved
-
-                    moves.append(Move(Square(row, col, self), Square(row, COLS - 2, self)))
-
+                    pass
+                    # moves.append(Move(Square(row, col, self), Square(row, COLS - 2, self)))
         piece.valid_moves = moves
 
     def _can_castle_kingside(self, king_piece, row, col):
