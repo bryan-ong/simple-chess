@@ -5,7 +5,7 @@ from const import *
 # https://python-forum.io/thread-25114.html
 class Button:
     def __init__(self, text="", font=None, image=None, width=None, height=None, pos=(0, 0), text_color=(255, 0, 0),
-                 bg_color=(0, 0, 0, 0), hover_color=(125, 25, 25), action=None):
+                 bg_color=None, hover_color=(125, 25, 25), action=None):
         self.image = image
 
         if width is None:
@@ -35,7 +35,11 @@ class Button:
     def draw(self, surface):
         self.check_hover()
         # if not self.image or self.is_hovered:
-        pygame.draw.rect(surface, self.current_color, self.rect)
+        if self.is_hovered:
+            pygame.draw.rect(surface, self.current_color, self.rect)
+
+        if self.bg_color:
+            pygame.draw.rect(surface, self.current_color, self.rect)
 
         if self.image:
             surface.blit(self.image, self.image_rect)

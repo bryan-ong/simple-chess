@@ -50,6 +50,14 @@ class Square:
     def is_empty_and_not_under_attack(self, color):
         return self.is_empty() and not self.is_under_attack(color)
 
+    def __str__(self):
+        return f"""
+Square:
+Row: {self.row}
+Col: {self.col}
+Piece: {self.piece}
+"""
+
     @staticmethod # Helper method
     def in_range(*args):
         for arg in args:

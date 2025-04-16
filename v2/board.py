@@ -156,11 +156,14 @@ class Board:
                     moves.append(Move(Square(row, col, self), Square(row + direction, col + dc, self, target.piece)))
 
         # En passant
-        if self.last_move and isinstance(self.last_move.final.piece, Pawn):
-            last_pawn = self.last_move.final.piece
-            if abs(self.last_move.initial.row - self.last_move.final.row) == 2: # Check if the last move was a pawn and if it has moved 2 squares
-                if row == self.last_move.final.row and abs(col - self.last_move.final.col) == 1:
-                    moves.append(Move(Square(row, col, self), Square(row + direction, self.last_move.final.col, self, last_pawn)))
+        if self.last_move:
+            final = self.last_move.final
+
+            if isinstance(self.squares[final.row][final.col].piece, Pawn):
+                prev_pawn = self.squares[final.row][final.col].piece
+                if abs(self.last_move.initial.row - self.last_move.final.row) == 2: # Check if the last move was a pawn and if it has moved 2 squares
+                    if row == self.last_move.final.row and abs(col - self.last_move.final.col) == 1:
+                        moves.append(Move(Square(row, col, self), Square(row + direction, self.last_move.final.col, self), captured_piece=prev_pawn))
 
         piece.valid_moves = moves
 
@@ -283,19 +286,18 @@ class Board:
         # Execute the move
         self.squares[initial.row][initial.col].piece = None
         self.squares[final.row][final.col].piece = piece
-        piece.moved = True
 
         # Handle special moves
         if isinstance(piece, Pawn):
-            # En passant capture
-            if initial.col != final.col and self.squares[final.row][final.col].is_empty():
+            diff = final.col - initial.col
+            # print(diff)
+            # print(self.squares[final.row][final.col])
+            if diff != 0:
+                # print("2")
                 self.squares[initial.row][final.col].piece = None
                 if not testing:
-                    SoundManager().play("capture")
-
-            # Check promotion
-            if final.row == 0 or final.row == ROWS - 1:
-                self.pending_promotion = True
+                    # print("3")
+                    self.was_last_move_capture = True
 
         elif isinstance(piece, King):
             # Castling
@@ -314,7 +316,7 @@ class Board:
                     self.squares[row][col - 2].piece = piece
                     self.squares[row][col - 1].piece = rook
                 SoundManager().play("castle")
-
+        piece.moved = True
         self.last_move = move
 
         # Check for check/checkmate
