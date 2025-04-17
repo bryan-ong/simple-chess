@@ -2,10 +2,11 @@ import pygame.mouse
 
 from const import *
 
+
 # https://python-forum.io/thread-25114.html
 class Button:
     def __init__(self, text="", font=None, image=None, width=None, height=None, pos=(0, 0), text_color=(255, 0, 0),
-                 bg_color=None, hover_color=(125, 25, 25), action=None):
+                 bg_color=None, hover_color=(125, 25, 25), action=None, border_radius=0):
         self.image = image
 
         if width is None:
@@ -19,6 +20,7 @@ class Button:
             self.image_rect = image.get_rect(center=self.rect.center)
 
         # Text initialization
+        self.border_radius = border_radius
         self.text = text
         self.font = pygame.font.SysFont('monospace', 18, bold=True) if font is None else font
         self.text_surf = self.font.render(text, True, text_color)
@@ -36,7 +38,7 @@ class Button:
         self.check_hover()
         # if not self.image or self.is_hovered:
         if self.is_hovered:
-            pygame.draw.rect(surface, self.current_color, self.rect)
+            pygame.draw.rect(surface, self.current_color, self.rect, border_radius=self.border_radius)
 
         if self.bg_color:
             pygame.draw.rect(surface, self.current_color, self.rect)
@@ -72,7 +74,6 @@ class Button:
                 return
             elif mouse_pressed and not self.pressed:
                 self.pressed = True
-                print("pressed")
                 return
         else:
             self.pressed = False

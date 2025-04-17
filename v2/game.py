@@ -12,6 +12,8 @@ from button import Button
 from soundmanager import SoundManager
 from chesstimer import ChessTimer
 from const import *
+
+
 class Game:
 
 
@@ -29,6 +31,8 @@ class Game:
         self.last_dragged_pos = None
         self.font_monospace = pygame.font.SysFont('monospace', 38, bold=True)
         self.font_segoe = pygame.font.SysFont('segoeui', 28, bold=True)
+        self.font_corbel = pygame.font.SysFont('corbel', 28)
+        self.font_corbel_small = pygame.font.SysFont('corbel', 20)
 
         self.checkmate_prompt = Button(
             text="",
@@ -51,6 +55,7 @@ class Game:
             BOARD_WIDTH / 2)
 
         self.darkened_color = tuple(i * (0.95 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
+        self.darker_color = tuple(i * (0.9 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
 
         self.exit_button = Button(
             image=exit_image,
@@ -69,13 +74,36 @@ class Game:
             action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
         )
 
+
+        self.bullet_btn_1 = Button(
+            font=self.font_corbel,
+            text="1 min",
+            text_color=self.config.theme.bg.light,
+            width=100,
+            height=40,
+            bg_color=self.config.theme.bg.dark,
+            pos=(0, 118 + BORDER_RADIUS * 2),
+            action=lambda: print("hello"),
+            border_radius=BORDER_RADIUS
+        )
+
+        self.bullet_icon = pygame.image.load("../assets/images/bullet.svg")
+        self.bullet_icon_rect = self.bullet_icon.get_rect()
+        self.bullet_icon_rect.center = (20, 118)
+        self.blitz_icon = pygame.image.load("../assets/images/blitz.svg")
+        self.blitz_icon_rect = self.blitz_icon.get_rect()
+        self.blitz_icon_rect.center = (20, 118 + BORDER_RADIUS * 8)
+        self.rapid_icon = pygame.image.load("../assets/images/rapid.svg")
+        self.rapid_icon_rect = self.rapid_icon.get_rect()
+        self.rapid_icon_rect.center = (20, 118 + BORDER_RADIUS * 16)
+
         self.bg_rect = pygame.Rect(0, 0, SCR_WIDTH, SCR_HEIGHT)
         self.top_bar = pygame.Rect(0, 0, SCR_WIDTH, 40)
 
         self.black_timer = pygame.Rect((SCR_WIDTH - SQSIZE) // 2, BOARD_START_Y - (BORDER_RADIUS * 3), SQSIZE, BORDER_RADIUS * 3)
         self.white_timer = pygame.Rect((SCR_WIDTH - SQSIZE) // 2, BOARD_START_Y + BOARD_HEIGHT, SQSIZE, BORDER_RADIUS * 3)
 
-
+        self.settings_sidebar = pygame.Rect(0, 40, SIDEBAR_WIDTH, SCR_HEIGHT - 40)
 
 
     def show_timer(self):
@@ -99,15 +127,18 @@ class Game:
         self.surface.blit(black_time_surf, black_time_rect)
         white_time_rect = white_time_surf.get_rect(center=(BOARD_START_X + BOARD_WIDTH // 2, BOARD_START_Y + BOARD_HEIGHT + BORDER_RADIUS * 3 // 2))
         self.surface.blit(white_time_surf, white_time_rect)
-
+        self.bullet_btn_1.draw_and_handle(self.surface)
 
     def show_gui(self):
         theme = self.config.theme
 
+        # Main bg
         pygame.draw.rect(self.surface, theme.bg.dark, self.bg_rect)
 
         self.darkened_color = tuple(i * (0.95 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
+        self.darker_color = tuple(i * (0.8 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
 
+        # Top bar
         pygame.draw.rect(self.surface, self.darkened_color, self.top_bar)
 
 
@@ -115,9 +146,22 @@ class Game:
         self.exit_button.draw_and_handle(self.surface)
         self.minimize_button.draw_and_handle(self.surface)
 
-        title_surf = self.font_monospace.render("Chess", True, theme.bg.light)
+        # Chess top-left
+        self.surface.blit(self.font_monospace.render("Chess", True, theme.bg.light), (10, 0))
 
-        self.surface.blit(title_surf, (10, 0))
+        # Game settings sidebar
+        pygame.draw.rect(self.surface, self.darker_color, self.settings_sidebar)
+        # Game settings sidebar title
+        self.surface.blit(self.font_corbel.render("Game Settings", True, theme.bg.light), (10, 40 + BORDER_RADIUS))
+
+        self.surface.blit(self.font_corbel_small.render("Bullet", True, theme.bg.light), (40, 110))
+        self.surface.blit(self.bullet_icon, self.bullet_icon_rect)
+
+        self.surface.blit(self.font_corbel_small.render("Blitz", True, theme.bg.light), (40, 110 + BORDER_RADIUS * 8))
+        self.surface.blit(self.blitz_icon, self.blitz_icon_rect)
+
+        self.surface.blit(self.font_corbel_small.render("Rapid", True, theme.bg.light), (40, 110 + BORDER_RADIUS * 16))
+        self.surface.blit(self.rapid_icon, self.rapid_icon_rect)
 
 
     def show_checkmate(self, shadow_surface):

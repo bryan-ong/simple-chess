@@ -8,8 +8,8 @@ from move import Move
 from soundmanager import SoundManager
 from pygame.locals import *
 # Adapted from https://www.youtube.com/watch?v=OpL0Gcfn4B4
-class Main:
 
+class Main:
     def __init__(self):
         pygame.mixer.pre_init(44100, 16, 1, 4096)
         pygame.init()
@@ -110,6 +110,8 @@ class Main:
                     if event.key == pygame.K_r:
                         game.reset()
                         game.board.timer.reset()
+
+                        game.board.timer.start("white")
                         game = self.game
                         board = self.game.board
                         dragger = self.game.dragger

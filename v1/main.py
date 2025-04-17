@@ -199,8 +199,7 @@ captured_rect = pygame.Rect(
 
 exit_button = Button(
     image=close_img,
-    width=40,
-    height=40,
+    width=40,    height=40,
     pos=(screen.get_width() - 40, 0),
     hover_color=RED,
     action=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT))

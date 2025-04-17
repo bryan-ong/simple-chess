@@ -18,6 +18,7 @@ class Piece:
         self.is_dragged = False
         self.should_promote = False
 
+
     def get_surf_with_size(self, texture, size):
         return pygame.transform.scale(pygame.image.load(texture).convert_alpha(), (size, size)) # Apparently convert_alpha() makes the game run smoother
 

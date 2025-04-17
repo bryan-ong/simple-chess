@@ -33,60 +33,65 @@ class Square:
 
     def is_under_attack(self, color):
         enemy_color = "black" if color == "white" else "white"
+        # I have to recheck manually instead of using calc_moves as that would call calc_pseudo_legal_moves which will call _king_moves which will call is_under_attack
+        # This results in an infinite recursion
+        # Also for checking the specific square we can use the position of the square as the root and check from there, however this is hard coded and it is not possible to
+        # easily add new piece types
 
-        # Check pawn attacks
-        pawn_dir = 1 if enemy_color == "white" else -1
+        # Check pawn
+        direction = 1 if enemy_color == "white" else -1
         for delta_col in [-1, 1]:
-            r, delta_col = self.row - pawn_dir, self.col + delta_col
-            if Square.in_range(r, delta_col):
-                piece = self.board.squares[r][delta_col].piece
+            row, delta_col = self.row - direction, self.col + delta_col
+            if Square.on_board(row, delta_col):
+                piece = self.board.squares[row][delta_col].piece
                 if isinstance(piece, Pawn) and piece.color == enemy_color:
                     return True
 
-        # Check knight attacks
+        # Check knight
         knight_moves = [
             (self.row - 2, self.col + 1), (self.row - 1, self.col + 2),
             (self.row + 1, self.col + 2), (self.row + 2, self.col + 1),
             (self.row + 2, self.col - 1), (self.row + 1, self.col - 2),
             (self.row - 1, self.col - 2), (self.row - 2, self.col - 1)
         ]
-        for r, c in knight_moves:
-            if Square.in_range(r, c):
-                piece = self.board.squares[r][c].piece
+        for row, delta_col in knight_moves:
+            if Square.on_board(row, delta_col):
+                piece = self.board.squares[row][delta_col].piece
                 if isinstance(piece, Knight) and piece.color == enemy_color:
                     return True
 
-        # Check sliding pieces (bishop, rook, queen)
+        # Check sliding
         directions = [
             (-1, -1), (-1, 0), (-1, 1),
             (0, -1), (0, 1),
             (1, -1), (1, 0), (1, 1)
         ]
-        for dr, dc in directions:
-            r, c = self.row + dr, self.col + dc
-            while Square.in_range(r, c):
-                piece = self.board.squares[r][c].piece
+        for delta_row, delta_col in directions:
+            row, col = self.row + delta_row, self.col + delta_col
+            while Square.on_board(row, col):
+                piece = self.board.squares[row][col].piece
                 if piece:
                     if piece.color == enemy_color:
-                        if (abs(dr) == abs(dc) and (isinstance(piece, Bishop) or isinstance(piece, Queen)) or
-                                (dr == 0 or dc == 0) and (isinstance(piece, Rook) or isinstance(piece, Queen))):
+                        if (abs(delta_row) == abs(delta_col) and (isinstance(piece, Bishop) or isinstance(piece, Queen)) or
+                                (delta_row == 0 or delta_col == 0) and (isinstance(piece, Rook) or isinstance(piece, Queen))):
                                     return True
                     break  # Stop if we hit any piece
-                r += dr
-                c += dc
+                row += delta_row
+                col += delta_col
 
-        # Check king attacks (adjacent squares)
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                if dr == 0 and dc == 0:
+        # Check king attacks
+        for delta_row in [-1, 0, 1]:
+            for delta_col in [-1, 0, 1]:
+                if delta_row == 0 and delta_col == 0:
                     continue
-                r, c = self.row + dr, self.col + dc
-                if Square.in_range(r, c):
-                    piece = self.board.squares[r][c].piece
+                row, col = self.row + delta_row, self.col + delta_col
+                if Square.on_board(row, col):
+                    piece = self.board.squares[row][col].piece
                     if isinstance(piece, King) and piece.color == enemy_color:
                         return True
 
         return False
+
     def is_empty_and_not_under_attack(self, color):
         return self.is_empty() and not self.is_under_attack(color)
 
@@ -99,7 +104,7 @@ Piece: {self.piece}
 """
 
     @staticmethod # Helper method
-    def in_range(*args):
+    def on_board(*args):
         for arg in args:
             if arg < 0 or arg > COLS - 1:
                 return False

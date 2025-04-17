@@ -144,15 +144,15 @@ class Board:
         direction = piece.dir
         start_row = 1 if piece.color == "black" else ROWS - 2
         # Forward moves
-        if Square.in_range(row + direction) and self.squares[row + direction][col].is_empty(): # If square in front of pawn is empty, append the move
+        if Square.on_board(row + direction) and self.squares[row + direction][col].is_empty(): # If square in front of pawn is empty, append the move
             moves.append(Move(Square(row, col, self), Square(row + direction, col, self)))
-            if row == start_row and Square.in_range(row + 2 * direction) and self.squares[row + 2 * direction][col].is_empty():
+            if row == start_row and Square.on_board(row + 2 * direction) and self.squares[row + 2 * direction][col].is_empty():
                 # Same as above but for 2 squares ahead, for loop could be used but since only 2 statements needed it is fine
                 moves.append(Move(Square(row, col, self), Square(row + 2 * direction, col, self)))
 
         # Captures
         for dc in [-1, 1]:
-            if Square.in_range(row + direction, col + dc):
+            if Square.on_board(row + direction, col + dc):
                 target = self.squares[row + direction][col + dc]
                 if target.has_enemy_piece(piece.color):
                     moves.append(Move(Square(row, col, self), Square(row + direction, col + dc, self, target.piece)))
@@ -179,7 +179,7 @@ class Board:
 
         # r c stand for row and col since they are already used as params
         for r, c in possible_moves:
-            if Square.in_range(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
+            if Square.on_board(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
                 moves.append(Move(Square(row, col, self), Square(r, c, self, self.squares[r][c].piece)))
 
         piece.valid_moves = moves
@@ -189,7 +189,7 @@ class Board:
         moves = []
         for dr, dc in directions:
             r, c = row + dr, col + dc
-            while Square.in_range(r, c):
+            while Square.on_board(r, c):
                 target = self.squares[r][c]
                 if target.is_empty():
                     moves.append(Move(Square(row, col, self), Square(r, c, self)))
@@ -221,7 +221,7 @@ class Board:
                 if dr == 0 and dc == 0:
                     continue
                 r, c = row + dr, col + dc
-                if Square.in_range(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
+                if Square.on_board(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
                     moves.append(Move(Square(row, col, self), Square(r, c, self, self.squares[r][c].piece)))
 
         # Castling
@@ -256,7 +256,6 @@ class Board:
             if (self.squares[row][1].is_empty_and_not_under_attack(piece.color)
             and self.squares[row][2].is_empty_and_not_under_attack(piece.color)
             and self.squares[row][3].is_empty_and_not_under_attack(piece.color)):
-
                 if isinstance(self.squares[row][0].piece, Rook) and not self.squares[row][0].piece.moved:  # Check if the rook on the last column has moved
                     return True
             return False
@@ -365,8 +364,8 @@ class Board:
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
         # Pawns
-        # for col in range(COLS):
-        #     self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
+        for col in range(COLS):
+            self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
 
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for col in range(COLS):
