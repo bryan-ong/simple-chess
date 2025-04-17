@@ -2,6 +2,7 @@ import os.path
 
 import pygame
 
+import v2.chesstimer
 from board import *
 from dragger import Dragger
 from config import Config
@@ -9,7 +10,7 @@ from square import Square
 from piece import *
 from button import Button
 from soundmanager import SoundManager
-
+from chesstimer import ChessTimer
 from const import *
 class Game:
 
@@ -26,6 +27,8 @@ class Game:
         SoundManager().set_config(self.config)
         self.last_dragged_piece = None
         self.last_dragged_pos = None
+        self.font_monospace = pygame.font.SysFont('monospace', 38, bold=True)
+        self.font_segoe = pygame.font.SysFont('segoeui', 28, bold=True)
 
         self.checkmate_prompt = Button(
             text="",
@@ -46,7 +49,6 @@ class Game:
             BOARD_START_Y - BORDER_RADIUS * 2,
             BOARD_WIDTH + BORDER_RADIUS * 2 * 2,
             BOARD_WIDTH / 2)
-        # Render methods
 
         self.darkened_color = tuple(i * (0.95 - self.config.theme.shadow_opacity) for i in self.config.theme.bg.dark)
 
@@ -67,10 +69,36 @@ class Game:
             action=lambda: pygame.event.post(pygame.event.Event(pygame.display.iconify()))
         )
 
-        self.bg_rect = pygame.Rect(0, 0, self.surface.get_width(), self.surface.get_height())
+        self.bg_rect = pygame.Rect(0, 0, SCR_WIDTH, SCR_HEIGHT)
         self.top_bar = pygame.Rect(0, 0, SCR_WIDTH, 40)
 
+        self.black_timer = pygame.Rect((SCR_WIDTH - SQSIZE) // 2, BOARD_START_Y - (BORDER_RADIUS * 3), SQSIZE, BORDER_RADIUS * 3)
+        self.white_timer = pygame.Rect((SCR_WIDTH - SQSIZE) // 2, BOARD_START_Y + BOARD_HEIGHT, SQSIZE, BORDER_RADIUS * 3)
 
+
+
+
+    def show_timer(self):
+
+        pygame.draw.rect(self.surface, self.config.theme.board_border.dark, self.black_timer, border_top_left_radius=BORDER_RADIUS, border_top_right_radius=BORDER_RADIUS)
+        pygame.draw.rect(self.surface, self.config.theme.board_border.light, self.white_timer, border_bottom_left_radius=BORDER_RADIUS, border_bottom_right_radius=BORDER_RADIUS)
+
+        black_time_surf = self.font_segoe.render(
+            self.board.timer.get_simple_formatted_time("black"),
+            True,
+            self.config.theme.board_border.light
+        )
+
+        white_time_surf = self.font_segoe.render(
+            self.board.timer.get_simple_formatted_time("white"),
+            True,
+            self.config.theme.board_border.dark
+        )
+
+        black_time_rect = black_time_surf.get_rect(center=(BOARD_START_X + BOARD_WIDTH // 2, BOARD_START_Y - BORDER_RADIUS * 3 // 2))
+        self.surface.blit(black_time_surf, black_time_rect)
+        white_time_rect = white_time_surf.get_rect(center=(BOARD_START_X + BOARD_WIDTH // 2, BOARD_START_Y + BOARD_HEIGHT + BORDER_RADIUS * 3 // 2))
+        self.surface.blit(white_time_surf, white_time_rect)
 
 
     def show_gui(self):
@@ -87,7 +115,7 @@ class Game:
         self.exit_button.draw_and_handle(self.surface)
         self.minimize_button.draw_and_handle(self.surface)
 
-        title_surf = pygame.font.SysFont('monospace', 38, bold=True).render("Chess", True, theme.bg.light)
+        title_surf = self.font_monospace.render("Chess", True, theme.bg.light)
 
         self.surface.blit(title_surf, (10, 0))
 
@@ -109,13 +137,19 @@ class Game:
 
     def show_board_misc(self):
         theme = self.config.theme
-
+        border_radius = BORDER_RADIUS if theme.rounded else 0
         # Board border
-        pygame.draw.rect(self.surface, theme.board_border.light, (
+        pygame.draw.rect(self.surface, theme.board_border.dark, (
             BOARD_START_X - BORDER_RADIUS,
             BOARD_START_Y - BORDER_RADIUS,
             BOARD_WIDTH + BORDER_RADIUS * 2,
-            BOARD_HEIGHT + BORDER_RADIUS * 2), border_radius=BORDER_RADIUS if theme.rounded else 0)
+            BOARD_HEIGHT // 2 + BORDER_RADIUS * 2), border_top_left_radius=border_radius, border_top_right_radius=border_radius)
+
+        pygame.draw.rect(self.surface, theme.board_border.light, (
+            BOARD_START_X - BORDER_RADIUS,
+            BOARD_START_Y + BOARD_HEIGHT // 2,
+            BOARD_WIDTH + BORDER_RADIUS * 2,
+            BOARD_HEIGHT // 2 + BORDER_RADIUS), border_bottom_left_radius=border_radius, border_bottom_right_radius=border_radius)
 
     def show_turn_indicator(self):
         color = self.config.theme.turn_indicator.light
@@ -277,7 +311,7 @@ class Game:
     def show_promotion(self, shadow_surface):
         if not self.board.pending_promotion:
             return
-
+        self.board.timer.pause()
         theme = self.config.theme
         if self.board.last_move is not None:
             if isinstance(self.dragger.piece, Pawn):
@@ -292,7 +326,8 @@ class Game:
                     def create_promotion_callback(piece, final, Piece_class):
                         return lambda: [
                             self.board.set_promote_piece(piece, final, Piece_class),
-                            self.remove_promote_buttons()
+                            self.remove_promote_buttons(),
+                            self.board.timer.start(self.next_player)
                         ]
 
                     # Without a callback python will always use the latest iteration which is Knight for the action
@@ -314,7 +349,7 @@ class Game:
     # Non-render methods
     def next_turn(self):
         self.next_player = "white" if self.next_player == "black" else "black"
-
+        self.board.timer.active_player = self.next_player
 
     def set_hover(self, row, col):
         pass

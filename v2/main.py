@@ -24,12 +24,18 @@ class Main:
 
 
     def mainloop(self):
+        run = True
         game = self.game
         board = self.game.board
         dragger = self.game.dragger
         shadow_surface = self.shadow_surface
 
-        while 1:
+        TIMER_EVENT = pygame.USEREVENT + 1
+        pygame.time.set_timer(TIMER_EVENT, 100) # Update every 100ms, should be good enough for accuracy
+
+        board.start_game()
+
+        while run:
             game.show_gui()
             game.show_turn_indicator()
             game.show_board_misc()
@@ -41,9 +47,10 @@ class Main:
             game.show_pieces()
             game.show_promotion(shadow_surface)
             game.show_checkmate(shadow_surface)
+            game.show_timer()
 
             self.clock.tick()
-            print(self.clock.get_fps())
+            # print(self.clock.get_fps())
 
             for event in pygame.event.get():
                 hover_coords, is_hover_valid = dragger.grid_coords(
@@ -65,8 +72,16 @@ class Main:
                             dragger.save_initial(event.pos)
                             dragger.drag_piece(piece)
 
+                elif event.type == TIMER_EVENT:
+                    board.timer.update(self.clock)
+
+                    if board.timer.is_timeout():
+                        loser = board.timer.get_loser()
+                        print(loser)
+
                 elif event.type == pygame.MOUSEMOTION:  # Mouse motion
                     dragger.update_mouse(event.pos)
+                    run = True
 
                 elif event.type == pygame.MOUSEBUTTONUP:  # Release click
 
@@ -87,7 +102,6 @@ class Main:
 
                             game.next_turn()
 
-
                 elif event.type == pygame.KEYDOWN: # Change theme hotkey
                     if event.key == pygame.K_t:
                         game.change_theme()
@@ -95,6 +109,7 @@ class Main:
                         game.randomize_theme()
                     if event.key == pygame.K_r:
                         game.reset()
+                        game.board.timer.reset()
                         game = self.game
                         board = self.game.board
                         dragger = self.game.dragger
@@ -103,7 +118,7 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
-            # game.randomize_theme()
+            # game.randomize_theme() # DISCO BUTTON
 
             pygame.display.update()
 

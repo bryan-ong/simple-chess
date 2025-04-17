@@ -1,4 +1,5 @@
 import copy
+import itertools
 import math
 import sys
 
@@ -8,7 +9,7 @@ from piece import *
 from const import *
 from move import Move
 from soundmanager import SoundManager
-
+from chesstimer import ChessTimer
 
 class Board:
     def __init__(self, player_count):
@@ -24,6 +25,7 @@ class Board:
         self._move_cache = {}  # Caching
         self.was_last_move_capture = False
         self.winner = None
+        self.timer = ChessTimer()
 
     def in_check(self, color):
         # Checks if the king is in check for that color
@@ -174,6 +176,7 @@ class Board:
             (row - 2, col + 1), (row - 1, col + 2), (row + 1, col + 2), (row + 2, col + 1),
             (row + 2, col - 1), (row + 1, col - 2), (row - 1, col - 2), (row - 2, col - 1)
         ]
+
         # r c stand for row and col since they are already used as params
         for r, c in possible_moves:
             if Square.in_range(r, c) and self.squares[r][c].is_empty_or_enemy(piece.color):
@@ -350,6 +353,8 @@ class Board:
         self.pending_promotion = False
 
 
+    def start_game(self):
+        self.timer.start("white")
 
     def _create(self):
         for row in range(ROWS):
@@ -360,8 +365,8 @@ class Board:
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
         # Pawns
-        for col in range(COLS):
-            self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
+        # for col in range(COLS):
+        #     self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
 
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for col in range(COLS):
