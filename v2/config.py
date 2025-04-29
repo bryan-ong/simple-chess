@@ -19,22 +19,20 @@ class Config:
 
 
 
-        self.move_sound = Sound(
-            os.path.join(SOUNDS_DIR, 'move.mp3'))
-        self.capture_sound = Sound(
-            os.path.join(SOUNDS_DIR, 'capture.mp3'))
-        self.check_sound = Sound(
-            os.path.join(SOUNDS_DIR, 'check.mp3'))
-        self.castle_sound = Sound(
-            os.path.join(SOUNDS_DIR, 'castle.mp3'))
-        self.promote_sound = Sound(
-            os.path.join(SOUNDS_DIR, 'promote.mp3'))
-        self.checkmate_sound = Sound(
-            os.path.join(SOUNDS_DIR, 'checkmate.mp3'))
+        self.move_sound = Sound(os.path.join(SOUNDS_DIR, 'move.mp3'))
+        self.capture_sound = Sound(os.path.join(SOUNDS_DIR, 'capture.mp3'))
+        self.check_sound = Sound(os.path.join(SOUNDS_DIR, 'check.mp3'))
+        self.castle_sound = Sound(os.path.join(SOUNDS_DIR, 'castle.mp3'))
+        self.promote_sound = Sound(os.path.join(SOUNDS_DIR, 'promote.mp3'))
+        self.checkmate_sound = Sound(os.path.join(SOUNDS_DIR, 'checkmate.mp3'))
+        self.draw_sound = Sound(os.path.join(SOUNDS_DIR, 'draw.mp3'))
+        self.ten_seconds_sound = Sound(os.path.join(SOUNDS_DIR, 'ten_seconds.mp3'))
+        self.timeout_sound = Sound(os.path.join(SOUNDS_DIR, 'timeout.mp3'))
+        self.start_sound = Sound(os.path.join(SOUNDS_DIR, 'start.mp3'))
 
 
-    def change_theme(self):
-        self.idx += 1
+    def change_theme(self, dir=1):
+        self.idx += dir
         self.idx %= len(self.themes)
         self.theme = self.themes[self.idx]
 
@@ -55,3 +53,6 @@ class Config:
         random = Theme(rgb_tuples[0], rgb_tuples[1], rgb_tuples[2], rgb_tuples[3], rgb_tuples[4], rgb_tuples[5], rgb_tuples[6], rgb_tuples[7], shadow_opacity=uniform(0.15, 0.35), rounded=bool(getrandbits(1)),)
 
         self.theme = random
+
+    def save_current_theme(self):
+        self.themes.append(self.theme)

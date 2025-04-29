@@ -37,11 +37,9 @@ class Button:
     def draw(self, surface):
         self.check_hover()
         # if not self.image or self.is_hovered:
-        if self.is_hovered:
+        if self.is_hovered or self.bg_color:
             pygame.draw.rect(surface, self.current_color, self.rect, border_radius=self.border_radius)
 
-        if self.bg_color:
-            pygame.draw.rect(surface, self.current_color, self.rect)
 
         if self.image:
             surface.blit(self.image, self.image_rect)

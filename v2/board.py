@@ -12,8 +12,11 @@ from soundmanager import SoundManager
 from chesstimer import ChessTimer
 
 class Board:
-    def __init__(self, player_count):
+    def __init__(self, player_count, init_time_mins, inc_time_secs):
+        self.drew = False
+        self.stalemated = False
         self.checkmated = False
+        self.game_over = False
         self.squares = [[Square(row, col, self, self) for col in range(COLS)] for row in range(ROWS)]
         self._create()
         self._add_pieces("white")
@@ -25,7 +28,9 @@ class Board:
         self._move_cache = {}  # Caching
         self.was_last_move_capture = False
         self.winner = None
-        self.timer = ChessTimer()
+        self.timer = ChessTimer(self, init_time_mins, inc_time_secs)
+        self.captured_pieces_white = []
+        self.captured_pieces_black = []
 
     def in_check(self, color):
         # Checks if the king is in check for that color
@@ -275,17 +280,52 @@ class Board:
                         return False
         return True
 
+    def is_stalemate(self, color):
+        # Checkmate method just with some inverted logic
+        if self.in_check(color):
+            return False
+
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = self.squares[row][col].piece
+                if piece and piece.color == color:
+                    self.calc_moves(piece, row, col)
+                    if piece.valid_moves:
+                        return False
+
+        return True
+
+    def is_draw(self):
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = self.squares[row][col].piece
+                if piece and not isinstance(piece, King):
+                    return False
+        return True
+
     def move(self, piece, move, testing=False):
         if not testing and not self.valid_move(piece, move):
             return False
 
         initial = move.initial
         final = move.final
+        final_square = self.squares[final.row][final.col]
 
         # Clear cache
         self._move_cache = {}
 
         # Execute the move
+        captured_piece = self.squares[final.row][final.col].piece
+
+
+
+        if final_square.has_enemy_piece(piece.color):
+            if piece.color == "white":
+                self.captured_pieces_white.append(captured_piece)
+            else:
+                self.captured_pieces_black.append(captured_piece)
+
+
         self.squares[initial.row][initial.col].piece = None
         self.squares[final.row][final.col].piece = piece
 
@@ -321,13 +361,22 @@ class Board:
         piece.moved = True
         self.last_move = move
 
-        # Check for check/checkmate
+        # Check for check/checkmate ( Now added stalemate and draw )
         if not testing:
             opponent_color = "black" if piece.color == "white" else "white"
             if self.is_checkmate(opponent_color):
                 SoundManager().play("checkmate")
                 self.checkmated = True
+                self.game_over = True
                 self.winner = piece.color
+            elif self.is_stalemate(opponent_color):
+                self.stalemated = True
+                self.game_over = True
+                SoundManager().play("draw")
+            elif self.is_draw():
+                self.drew = True
+                self.game_over = True
+                SoundManager().play("draw")
             elif self.in_check(opponent_color):
                 SoundManager().play("check")
             elif self.was_last_move_capture:
@@ -364,8 +413,8 @@ class Board:
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
         # Pawns
-        for col in range(COLS):
-            self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
+        # for col in range(COLS):
+        #     self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
 
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for col in range(COLS):

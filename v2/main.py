@@ -8,18 +8,22 @@ from move import Move
 from soundmanager import SoundManager
 from pygame.locals import *
 # Adapted from https://www.youtube.com/watch?v=OpL0Gcfn4B4
-
+from config import Config
 class Main:
+
     def __init__(self):
-        pygame.mixer.pre_init(44100, 16, 1, 4096)
+        self.should_reset = False
+        # pygame.mixer.pre_init(44100, 16, 1, 4096) # Slight buzzing sound, will remove
         pygame.init()
         self.screen = pygame.display.set_mode((0,0), pygame.WINDOWMINIMIZED | DOUBLEBUF)
         pygame.display.set_caption("Chess")
         Game.SCR_WIDTH = self.screen.get_width()
         Game.SCR_HEIGHT = self.screen.get_height()
-        self.game = Game(self.screen)
+        self.config = Config()
+        self.game = Game(self, self.screen, self.config,10, 0) # Default time control
         self.shadow_surface = pygame.Surface((SCR_WIDTH, SCR_HEIGHT), pygame.SRCALPHA)
         self.clock = pygame.time.Clock()
+
 
 
 
@@ -29,13 +33,14 @@ class Main:
         board = self.game.board
         dragger = self.game.dragger
         shadow_surface = self.shadow_surface
+        SoundManager().play("start")
 
         TIMER_EVENT = pygame.USEREVENT + 1
         pygame.time.set_timer(TIMER_EVENT, 100) # Update every 100ms, should be good enough for accuracy
 
         board.start_game()
-
         while run:
+
             game.show_gui()
             game.show_turn_indicator()
             game.show_board_misc()
@@ -46,15 +51,17 @@ class Main:
             game.show_moves(shadow_surface)
             game.show_pieces()
             game.show_promotion(shadow_surface)
-            game.show_checkmate(shadow_surface)
             game.show_timer()
+            game.show_captured()
+            game.show_game_end(shadow_surface)
 
             self.clock.tick()
             # print(self.clock.get_fps())
 
             for event in pygame.event.get():
-                hover_coords, is_hover_valid = dragger.grid_coords(
-                    event.pos if event.type == pygame.MOUSEMOTION else None)
+                hover_coords, is_hover_valid = dragger.grid_coords(event.pos if event.type == pygame.MOUSEMOTION else None)
+
+
                 if is_hover_valid:
                     game.set_hover(hover_coords[0], hover_coords[1])
                 else:
@@ -77,7 +84,6 @@ class Main:
 
                     if board.timer.is_timeout():
                         loser = board.timer.get_loser()
-                        print(loser)
 
                 elif event.type == pygame.MOUSEMOTION:  # Mouse motion
                     dragger.update_mouse(event.pos)
@@ -106,15 +112,9 @@ class Main:
                     if event.key == pygame.K_t:
                         game.change_theme()
                     if event.key == pygame.K_g:
-                        game.randomize_theme()
+                        game.change_theme(True)
                     if event.key == pygame.K_r:
-                        game.reset()
-                        game.board.timer.reset()
-
-                        game.board.timer.start("white")
-                        game = self.game
-                        board = self.game.board
-                        dragger = self.game.dragger
+                        game, board, dragger = self.reset_board()
 
                 elif event.type == pygame.QUIT: # Quit app
                     pygame.quit()
@@ -122,8 +122,29 @@ class Main:
 
             # game.randomize_theme() # DISCO BUTTON
 
+            if self.should_reset:
+                game, board, dragger = self.reset_board()
+                self.should_reset = False
+
             pygame.display.update()
 
+    def reset_board(self):
+
+        self.game = Game(self, self.screen, self.config, self.game.init_time_mins, self.game.inc_time_secs)
+
+        game = self.game
+        board = self.game.board
+        dragger = self.game.dragger
+
+        board.timer.reset()
+        board.timer.start("white")
+
+        SoundManager().play("start")
+
+        return game, board, dragger
+
+    def set_should_reset(self):
+        self.should_reset = True
 
 main = Main()
 

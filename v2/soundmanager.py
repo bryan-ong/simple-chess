@@ -21,6 +21,10 @@ class SoundManager:
             "promote": config.promote_sound,
             "move": config.move_sound,
             "checkmate": config.checkmate_sound,
+            "draw": config.draw_sound,
+            "ten_seconds": config.ten_seconds_sound,
+            "timeout": config.timeout_sound,
+            "start": config.start_sound,
         }
 
 
