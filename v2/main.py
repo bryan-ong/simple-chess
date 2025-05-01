@@ -24,9 +24,6 @@ class Main:
         self.shadow_surface = pygame.Surface((SCR_WIDTH, SCR_HEIGHT), pygame.SRCALPHA)
         self.clock = pygame.time.Clock()
 
-
-
-
     def mainloop(self):
         run = True
         game = self.game

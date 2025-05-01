@@ -54,6 +54,7 @@ class Square:
             (self.row + 2, self.col - 1), (self.row + 1, self.col - 2),
             (self.row - 1, self.col - 2), (self.row - 2, self.col - 1)
         ]
+
         for row, delta_col in knight_moves:
             if Square.on_board(row, delta_col):
                 piece = self.board.squares[row][delta_col].piece

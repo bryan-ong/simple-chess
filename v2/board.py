@@ -330,16 +330,18 @@ class Board:
         self.squares[final.row][final.col].piece = piece
 
         # Handle special moves
+        # En passant
         if isinstance(piece, Pawn):
             diff = final.col - initial.col
             # print(diff)
             # print(self.squares[final.row][final.col])
             if diff != 0:
                 # print("2")
-                self.squares[initial.row][final.col].piece = None
-                if not testing:
-                    # print("3")
-                    self.was_last_move_capture = True
+                if self.squares[initial.row][final.col].piece is not None and piece.color != self.squares[initial.row][final.col].piece.color:
+                    self.squares[initial.row][final.col].piece = None
+                    if not testing:
+                        # print("3")
+                        self.was_last_move_capture = True
 
         elif isinstance(piece, King):
             # Castling
@@ -413,8 +415,8 @@ class Board:
         row_pawn, row_other = (COLS - 2, COLS - 1) if color == "white" else (1, 0)
 
         # Pawns
-        # for col in range(COLS):
-        #     self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
+        for col in range(COLS):
+            self.squares[row_pawn][col] = Square(row_pawn, col, self, Pawn(color))
 
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for col in range(COLS):
